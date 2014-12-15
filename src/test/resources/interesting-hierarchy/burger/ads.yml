@@ -1,0 +1,8 @@
+start:
+    echo "started burger"
+
+stop:
+    echo "stopped burger"
+
+status:
+    echo "ok"

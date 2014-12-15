@@ -1,0 +1,15 @@
+start:
+    bash service.sh 1>logs/stdout 2>logs/stderr &
+
+stop:
+    pgrep -f service.sh | xargs kill -9
+
+status:
+    pgrep -f service.sh
+
+logs:
+    - logs/stdout
+    - logs/stderr
+
+description:
+    A rather trivial service

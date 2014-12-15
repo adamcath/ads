@@ -1,0 +1,10 @@
+# this service is nested inside another
+
+start:
+    echo "started western"
+
+stop:
+    echo "stopped western"
+
+status:
+    echo "ok"

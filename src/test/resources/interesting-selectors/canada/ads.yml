@@ -1,0 +1,8 @@
+start:
+    echo "started canada"
+
+stop:
+    echo "stopped canada"
+
+status:
+    echo "ok"

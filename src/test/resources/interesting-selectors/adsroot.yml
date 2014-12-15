@@ -1,0 +1,6 @@
+groups:
+    north-america:
+    - america
+    - canada
+
+default: ireland

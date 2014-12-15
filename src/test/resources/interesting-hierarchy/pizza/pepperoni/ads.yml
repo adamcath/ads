@@ -1,0 +1,8 @@
+start:
+    echo "started pepperoni"
+
+stop:
+    echo "stopped pepperoni"
+
+status:
+    echo "ok"

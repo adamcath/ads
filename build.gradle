@@ -1,0 +1,9 @@
+task test(type:Exec) {
+    environment = [ PYTHONPATH: "src/main/python" ]
+    commandLine 'python', '-m', 'unittest', 'discover', 'src/test/python', '-v'
+}
+
+task functionalTest(type:Exec) {
+    workingDir 'src/test/bash'
+    commandLine '/bin/bash', 'FunctionalTest.sh'
+}

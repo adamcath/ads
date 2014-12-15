@@ -1,0 +1,8 @@
+start:
+    echo "started ireland"
+
+stop:
+    echo "stopped ireland"
+
+status:
+    echo "ok"

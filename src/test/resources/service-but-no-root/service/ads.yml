@@ -1,0 +1,8 @@
+start:
+    echo "started'
+
+stop:
+    exit "stopped"
+
+status:
+    exit "ok"
