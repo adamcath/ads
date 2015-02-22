@@ -31,6 +31,35 @@ def error(msg):
 
 
 ##############################################
+# Treelisting
+##############################################
+
+class Treelisting:
+
+    def __init__(self, sections=None):
+        self.sections = sections or []
+
+    def with_section(self, heading, listing_dict, empty_msg=None):
+        self.sections.append((heading, listing_dict, empty_msg))
+        return self
+
+    def pretty_print(self):
+        all_keys = [
+            k
+            for (heading, listing_dict, _) in self.sections
+            for k in listing_dict.keys()]
+        if len(all_keys) == 0:
+            return
+        column_width = max(map(len, all_keys)) + 1
+        for (heading, listing_dict, empty_msg) in self.sections:
+            empty = len(listing_dict) == 0
+            print("\n" + heading + (empty and " - " + empty_msg or ""))
+            if not empty:
+                for (k, v) in listing_dict.items():
+                    print(("%" + str(column_width) + "s: %s") % (k, v))
+
+
+##############################################
 # subprocess stuff
 ##############################################
 
@@ -116,6 +145,11 @@ class Service:
                        spec.get("stop"),
                        spec.get("status"),
                        spec.get("logs"))
+
+    @classmethod
+    def as_printable_dict(cls, services):
+        return dict([
+            (s.name, s.description or "(No description)") for s in services])
 
     def __init__(self, name, home, description=None,
                  start=None, stop=None, status=None, logs=None):
@@ -216,6 +250,10 @@ class ServiceSet:
                         dict((s.name, s) for s in service_sets),
                         OrderedDict())
 
+    @classmethod
+    def as_printable_dict(cls, service_sets):
+        return dict([(s.name, ', '.join(s.selectors)) for s in service_sets])
+
     def __init__(self, name, selector_set):
         self.name = name
         self.selectors = selector_set
@@ -247,9 +285,9 @@ def _find_service_ymls(project_root):
         if os.path.basename(path) == "adsroot.yml"
     ]
 
-    def in_nested_project_dir(path):
+    def in_nested_project_dir(path_str):
         for dir_path in nested_project_dirs:
-            if path.startswith(dir_path):
+            if path_str.startswith(dir_path):
                 return True
         return False
 
@@ -259,8 +297,6 @@ def _find_service_ymls(project_root):
         for p in find_output
         if os.path.basename(p) == "ads.yml" and not in_nested_project_dir(p)
     ]
-
-    return result
 
 
 def _adsfiles_to_service_names(adsfiles):
@@ -314,18 +350,6 @@ class Project:
         self.service_sets = service_sets or []
         self.default_selector = default_selector
 
-    def print_services(self):
-        services = self.services_by_name.values()
-
-        if len(services) == 0:
-            print("No services found in " + self.name)
-            return
-
-        max_name_len = max(map(lambda sp: len(sp.name), services))
-        for service in services:
-            print(("%" + str(max_name_len) + "s: %s") %
-                  (service.name, service.description or "(No description)"))
-
 
 ##############################################
 # Profile
@@ -371,13 +395,39 @@ class Ads:
     def resolve(self, selector):
 
         if selector == "default":
-            selector = (self.profile.default_selector or
-                        self.project.default_selector)
+            selector = self.get_default_selector()
 
         return ServiceSet.resolve(
             selector,
             self.project,
             self.project.service_sets + self.profile.service_sets)
+
+    def get_default_selector(self):
+        return (self.profile.default_selector or
+                self.project.default_selector)
+
+    def list(self):
+        default_selector = self.get_default_selector()
+
+        (Treelisting()
+            .with_section(
+                "All known services",
+                Service.as_printable_dict(self.project.services_by_name.values()),
+                "None (create ads.yml files in this dir tree)")
+            .with_section(
+                "Groups from user preferences",
+                ServiceSet.as_printable_dict(self.profile.service_sets),
+                "None (add 'groups' to ~/.asrc)")
+            .with_section(
+                "Groups from project",
+                ServiceSet.as_printable_dict(self.project.service_sets),
+                "None (add 'groups' to adsroot.yml)")
+            .with_section(
+                "Default service/group",
+                dict([
+                    (default_selector, ', '.join(self.resolve(default_selector)))
+                ]))
+         ).pretty_print()
 
 
 ##############################################
@@ -635,7 +685,7 @@ Some less common commands:
         args.service = ["default"]
 
     if args.command == "list":
-        ads.project.print_services()
+        ads.list()
         return
 
     try:

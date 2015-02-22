@@ -157,7 +157,12 @@ test_root_with_no_services_gives_error() {
     go_test_project root-but-no-services
     assert_fails "ads up" "No services"
     assert_fails "ads down" "No services"
-    assert_contains "$(ads list)" "No services found"
+    assert_contains "$(ads list)" \
+        "None (create ads.yml" \
+        "Groups from user preferences - None" \
+        "Groups from project" \
+        "Default service" \
+        "all"
     assert_fails_silently "ads list-logs"
     assert_fails_silently "ads cat-logs"
 }
@@ -179,6 +184,8 @@ test_nested_projects_and_services() {
         # Because nested services are allowed
     assert_not_contains "$top_listing" "pizza" "pepperoni"
         # Because nested projects form disjoint trees
+    assert_contains "$top_listing" "all: burger, fries, western"
+        # the default services
 
     cd burger
     local burger_listing="$(ads list)"
@@ -210,17 +217,22 @@ groups:
 default: north-america
 EOF
 
-    north_america_status="$(ads status || true)"
+    local north_america_status="$(ads status || true)"
     assert_contains "$north_america_status" "america" "canada"
     assert_not_contains "$north_america_status" "ireland"
 
-    europe_status="$(ads status europe || true)"
+    local europe_status="$(ads status europe || true)"
     assert_contains "$europe_status" "ireland"
     assert_not_contains "$europe_status" "america" "canada"
 
-    canada_status="$(ads status canada || true)"
+    local canada_status="$(ads status canada || true)"
     assert_contains "$canada_status" "canada"
     assert_not_contains "$canada_status" "america" "ireland"
+
+    local listing="$(ads list)"
+    assert_contains "$listing" \
+        "north-america: america, canada" \
+        "europe: ireland"
 }
 
 test_default_selector_is_all_when_none_defined() {
