@@ -7,3 +7,7 @@ task functionalTest(type:Exec) {
     workingDir 'src/test/bash'
     commandLine '/bin/bash', 'FunctionalTest.sh'
 }
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.1'
+}
