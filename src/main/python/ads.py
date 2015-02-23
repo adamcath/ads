@@ -6,13 +6,7 @@
 # @author adamcath
 
 
-import os
 import sys
-import tempfile
-import subprocess
-import argparse
-import glob
-from collections import OrderedDict
 
 
 def debug(msg):
@@ -28,6 +22,23 @@ def info(msg):
 def error(msg):
     sys.stderr.write("!!! " + msg + "\n")
     sys.stderr.flush()
+
+
+try:
+    import yaml
+except ImportError:
+    error(
+        "ads requires the python package 'pyyaml'.\n"
+        "Please install it with 'pip install pyyaml' or 'easy_install pyyaml'\n"
+        "(disregard the message about 'forcing --no-libyaml')")
+    sys.exit(1)
+
+import os
+import tempfile
+import subprocess
+import argparse
+import glob
+from collections import OrderedDict
 
 
 ##############################################
@@ -106,9 +117,6 @@ def _shell_quiet(cmd_str, working_dir):
 ##############################################
 # YML stuff
 ##############################################
-
-import yaml
-
 
 class ParseProjectException(Exception):
 
