@@ -416,6 +416,11 @@ class Ads:
 
     def list(self):
         default_selector = self.get_default_selector()
+        default_selector_resolution = "(Unresolved)"
+        try:
+            default_selector_resolution = ', '.join(self.resolve(default_selector))
+        except BadSelectorException:
+            pass
 
         (Treelisting()
             .with_section(
@@ -432,9 +437,7 @@ class Ads:
                 "None (add 'groups' to adsroot.yml)")
             .with_section(
                 "Default service/group",
-                dict([
-                    (default_selector, ', '.join(self.resolve(default_selector)))
-                ]))
+                {default_selector: default_selector_resolution})
          ).pretty_print()
 
 
