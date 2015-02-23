@@ -8,7 +8,7 @@ ads addresses this problem by requiring each participating service to expose a
 simple uniform interface for the most common commands: start, stop, status, and
 log locations.
 
-To use ads, drop a file called "ads.yml" in each service's directory:
+To use ads, drop a file called `ads.yml` in each service's directory:
 
 ```
 description: 
@@ -32,7 +32,7 @@ logs:
     # List any files with interesting output. Note the glob support
 ```
 
-And one more, called "adsroot.yml", in the root of your codebase:
+And one more, called `adsroot.yml`, in the root of your codebase:
 
 ```
 # Actually, there's nothing to put here yet.
@@ -48,7 +48,7 @@ Now you can run ads from anywhere in the codebase and get at any of the services
 webscale: (No description)
 ```
 
-# Starting a single service
+## Starting a single service
 
 ```
 ~/codebase/ninja $ ads up ninja
@@ -56,12 +56,12 @@ cd ~/codebase/ninja
 gradle run > obscure/logs/dir/out &
 --- Started ninja-service
 
-# up is idempotent
+### up is idempotent
 ~/codebase/ninja $ ads up ninja
 --- ninja-service is already running
 ```
 
-# Stopping a single service
+## Stopping a single service
 
 ```
 ~/codebase/ninja $ ads down ninja
@@ -70,7 +70,7 @@ pgrep -f ninja-service | xargs kill -9
 --- Stopped ninja-service
 ```
 
-# Following logs
+## Following logs
 
 ```
 ~/codebase/ninja $ ads logs   # You could specify a service; default is all
@@ -87,6 +87,21 @@ tail will just switch to the other log file when somebody writes to it
 ...
 ```
 
-# Prerequisites
+# Getting started
+
+## Dependencies
 
 - python: ads has been tested with 2.7.8 on Mac
+- pyyaml: install with `sudo pip install pyyaml` or `sudo easy_install pyyaml`
+
+## Installing
+
+- `git clone https://github.com/adamcath/ads.git`
+- Add ads/bin to your $PATH
+
+## Testing
+
+- Go to an ads project (try one in src/test/resources, like 
+  `interesting-selectors`) and type `ads list`
+- Now try adding ads to your project by following the overview above
+- (If you like, you can run tests with `./gradlew test functionalTest`)
