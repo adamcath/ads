@@ -524,6 +524,7 @@ def _up(service):
         error("Start command not defined for " + service.name)
         return False
     else:
+        info("Starting " + service.name)
         success = _shell(service.start, service.home)
         if success:
             info("Started " + service.name)
@@ -604,6 +605,7 @@ class AdsCommand:
 
         if self.verb == "up":
             assert_services_nonempty()
+            info("Starting " + str(services))
             if not all(map(lambda sp: _up(sp), services)):
                 raise StartFailed("One or more services failed to start")
 
