@@ -110,10 +110,6 @@ def _shell(cmd_str, working_dir, quiet=False):
     return status == 0
 
 
-def _shell_quiet(cmd_str, working_dir):
-    return _shell(cmd_str, working_dir, True)
-
-
 ##############################################
 # YML stuff
 ##############################################
@@ -502,14 +498,14 @@ def _status(service):
         status = False
         msg = "status command not defined"
     else:
-        status = _shell_quiet(service.status, service.home)
+        status = _shell(service.status, service.home)
         msg = status and "ok" or "not running"
     info(service.name + ": " + msg)
     return status
 
 
 def _is_running(service):
-    return _shell_quiet(service.status, service.home)
+    return _shell(service.status, service.home)
 
 
 def _up(service):
