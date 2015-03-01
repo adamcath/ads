@@ -639,6 +639,22 @@ class AdsCommand:
 
 
 ##############################################
+# Customized ArgumentParser
+##############################################
+
+class MyArgParser(argparse.ArgumentParser):
+
+    def error(self, message):
+        if "too few arguments" in message:
+            # Default behavior of "ads" is too punishing
+            # This behavior matches git
+            self.print_help()
+            sys.exit(2)
+        else:
+            super(MyArgParser, self).error(message)
+
+
+##############################################
 # main
 ##############################################
 
@@ -668,7 +684,7 @@ Some less common commands:
                     AdsCommand.verb_aliases.keys() +
                     ["list", "help"])
 
-    parser = argparse.ArgumentParser(
+    parser = MyArgParser(
         prog="ads",
         description="Start, stop, and manage microservices in a codebase",
         epilog=epilog,
