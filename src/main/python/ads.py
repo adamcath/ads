@@ -187,6 +187,9 @@ class Service:
     def get_description_or_default(self):
         return self.description or "(No description)"
 
+    def __repr__(self):
+        return self.name
+
 
 ##############################################
 # ServiceSet
