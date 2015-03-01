@@ -36,7 +36,7 @@ go_test_project() {
 # Temporarily sets your ads profile to the value of stdin
 set_ads_profile() {
     export ADS_PROFILE_HOME="$test_tmp"
-    cat > "$test_tmp/.adsrc"
+    cat > "$test_tmp/.ads_profile.yml"
 }
 
 ###############################################################################
@@ -162,7 +162,7 @@ test_root_with_no_services_gives_error() {
         "Groups defined in current project" \
         "None (add 'groups' to adsroot.yml)" \
         "Groups defined in your ads profile" \
-        "None (add 'groups' to ~/.adsrc)" \
+        "None (add 'groups' to ~/.ads_profile.yml)" \
         "Default service" \
         "all"
     assert_fails_silently "ads list-logs"

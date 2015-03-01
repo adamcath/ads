@@ -371,7 +371,7 @@ class Profile:
 
     @classmethod
     def load_from_dir(cls, profile_dir):
-        rc_path = os.path.join(profile_dir, ".adsrc")
+        rc_path = os.path.join(profile_dir, ".ads_profile.yml")
         if not os.path.isfile(rc_path):
             return Profile()
 
@@ -442,7 +442,7 @@ class Ads:
             .with_section(
                 "Groups defined in your ads profile:",
                 ServiceSet.as_printable_dict(self.profile.service_sets),
-                "None (add 'groups' to ~/.adsrc)")
+                "None (add 'groups' to ~/.ads_profile.yml)")
             .with_section(
                 "Default service for commands if none are specified:",
                 {default_selector: default_description})
