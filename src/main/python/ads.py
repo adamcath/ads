@@ -64,7 +64,7 @@ class Treelisting:
         column_width = max(map(len, all_keys)) + 1
         for (heading, listing_dict, empty_msg) in self.sections:
             empty = len(listing_dict) == 0
-            print("\n" + heading + (empty and " - " + empty_msg or ""))
+            print("\n" + heading + (empty and "\n " + empty_msg or ""))
             if not empty:
                 for (k, v) in listing_dict.items():
                     print(("%" + str(column_width) + "s: %s") % (k, v))
@@ -157,7 +157,7 @@ class Service:
     @classmethod
     def as_printable_dict(cls, services):
         return dict([
-            (s.name, s.description or "(No description)") for s in services])
+            (s.name, s.get_description_or_default()) for s in services])
 
     def __init__(self, name, home, description=None,
                  start=None, stop=None, status=None, logs=None):
@@ -183,6 +183,9 @@ class Service:
                 for abs_log_file
                 in glob.iglob(abs_log_glob)]
         return result
+
+    def get_description_or_default(self):
+        return self.description or "(No description)"
 
 
 ##############################################
@@ -320,8 +323,6 @@ def _adsfiles_to_service_names(adsfiles):
 
 
 class Project:
-    root_project = None
-    services_by_name = {}
 
     @classmethod
     def load_from_dir(cls, root_dir):
@@ -336,7 +337,7 @@ class Project:
     def load_from_files(cls, project_yml, svc_ymls):
         spec = _load_spec_file(project_yml)
         home = os.path.dirname(project_yml)
-        name = spec.get("name") or "project(%s)" % os.path.basename(home)
+        name = spec.get("name") or os.path.basename(home)
         services = [
             Service.load(svc_file, svc_name)
             for (svc_file, svc_name)
@@ -416,28 +417,32 @@ class Ads:
 
     def list(self):
         default_selector = self.get_default_selector()
-        default_selector_resolution = "(Unresolved)"
         try:
-            default_selector_resolution = ', '.join(self.resolve(default_selector))
+            default_description = ', '.join(self.resolve(default_selector))
         except BadSelectorException:
-            pass
+            default_description = "(Unresolved)"
+        if default_description == default_selector:
+            default_service = self.project.services_by_name[default_selector]
+            default_description = default_service.get_description_or_default()
+
+
 
         (Treelisting()
             .with_section(
-                "All known services",
+                "All services in current project (%s):" % self.project.name,
                 Service.as_printable_dict(self.project.services_by_name.values()),
                 "None (create ads.yml files in this dir tree)")
             .with_section(
-                "Groups from user preferences",
-                ServiceSet.as_printable_dict(self.profile.service_sets),
-                "None (add 'groups' to ~/.asrc)")
-            .with_section(
-                "Groups from project",
+                "Groups defined in current project:",
                 ServiceSet.as_printable_dict(self.project.service_sets),
                 "None (add 'groups' to adsroot.yml)")
             .with_section(
-                "Default service/group",
-                {default_selector: default_selector_resolution})
+                "Groups defined in your ads profile:",
+                ServiceSet.as_printable_dict(self.profile.service_sets),
+                "None (add 'groups' to ~/.adsrc)")
+            .with_section(
+                "Default service for commands if none are specified:",
+                {default_selector: default_description})
          ).pretty_print()
 
 

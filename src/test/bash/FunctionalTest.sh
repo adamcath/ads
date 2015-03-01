@@ -159,8 +159,10 @@ test_root_with_no_services_gives_error() {
     assert_fails "ads down" "No services"
     assert_contains "$(ads list)" \
         "None (create ads.yml" \
-        "Groups from user preferences - None" \
-        "Groups from project" \
+        "Groups defined in current project" \
+        "None (add 'groups' to adsroot.yml)" \
+        "Groups defined in your ads profile" \
+        "None (add 'groups' to ~/.adsrc)" \
         "Default service" \
         "all"
     assert_fails_silently "ads list-logs"
@@ -199,8 +201,11 @@ test_nested_projects_and_services() {
     assert_contains "$pizza_listing" "pepperoni"
     assert_not_contains "$pizza_listing" "burger" "western" "fries"
         # Those are in the other project
-    assert_not_contains "$pizza_listing" "pizza"
+    assert_not_contains "$pizza_listing" " pizza"
         # Because the root dir can't also be a service
+        # (note space before pizza; the word "pizza" does occur
+        # as the name of the root project; subprojects appear
+        # in a list starting with space)
 }
 
 ###############################################################################
