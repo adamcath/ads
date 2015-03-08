@@ -68,12 +68,12 @@ test_trivial_service_basics() {
 
     assert_ok "ads up service" "Started service"
     assert_ok "ads status service" "service: ok"
-    assert_contains "$(ads cat-logs)" \
+    assert_contains "$(ads logs --cat)" \
         "some output from the service" "some errors from the service"
 
     assert_ok "ads down service" "Stopped service"
     assert_fails_with_stdout "ads status service" "service: not running"
-    assert_contains "$(ads cat-logs)" \
+    assert_contains "$(ads logs --cat)" \
         "some output from the service" "some errors from the service"
 }
 
@@ -105,11 +105,27 @@ test_bounce() {
     assert_not_equal "$old_service_pid" "$new_service_pid"
 }
 
-test_logs() {
+test_logs_default() {
+    # Same as logs --tail
     go_test_project one-trivial-service
 
     ads up service
     ads logs service > /dev/null &
+
+    sleep 1
+
+    # There should be some invocation of "tail" with stdout and stderr
+    # (the service's log files) as arguments
+    assert_contains "$(ps -ef | grep 'tail -F')" "stdout" "stderr"
+
+    pgrep -f "tail -F service/logs" | xargs kill -9
+}
+
+test_logs_tail() {
+    go_test_project one-trivial-service
+
+    ads up service
+    ads logs --tail service > /dev/null &
 
     sleep 1
 
@@ -129,14 +145,14 @@ test_list_logs() {
     # Use assert_equals instead of a contains check because this command
     # can be used for pipelining. So it must be _exactly_ a cwd-relative
     # list of paths.
-    local log_list="$(ads list-logs)"
+    local log_list="$(ads logs --list)"
     assert_equal "$log_list" \
 "service/logs/stdout
 service/logs/stderr"
 
     # Path should be different from a different working directory
     cd service/logs
-    local log_list="$(ads list-logs)"
+    local log_list="$(ads logs --list)"
     assert_equal "$log_list" \
 "stdout
 stderr"
@@ -145,8 +161,8 @@ stderr"
 test_logs_commands_when_logs_missing() {
     go_test_project one-trivial-service
 
-    assert_fails "ads list-logs" "No log files found"
-    assert_fails "ads cat-logs" "No log files found"
+    assert_fails "ads logs --list" "No log files found"
+    assert_fails "ads logs --cat" "No log files found"
 }
 
 test_logs_commands_when_some_logs_missing() {
@@ -154,8 +170,8 @@ test_logs_commands_when_some_logs_missing() {
 
     touch burger/burger.log
 
-    assert_ok "ads list-logs" "burger.log"
-    assert_ok "ads cat-logs" "burger.log"
+    assert_ok "ads logs --list" "burger.log"
+    assert_ok "ads logs --cat" "burger.log"
 }
 
 ###############################################################################
@@ -182,8 +198,8 @@ test_root_with_no_services_gives_error() {
         "None (add 'groups' to ~/.ads_profile.yml)" \
         "Default service" \
         "all"
-    assert_fails_silently "ads list-logs"
-    assert_fails_silently "ads cat-logs"
+    assert_fails_silently "ads logs --list"
+    assert_fails_silently "ads logs --cat"
     assert_fails "ads home" "No services"
 }
 

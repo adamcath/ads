@@ -581,12 +581,16 @@ def _collect_rel_homes(services):
     return [s.resolve_home_relative_to_cwd() for s in services]
 
 
-def _default_cli(cmd, ads, args, fail_if_no_services=True):
-    parser = MyArgParser(prog=cmd)
+def _add_services_arg(parser):
     parser.add_argument(
         "service",
         nargs="*",
         help="The services or groups to act on")
+
+
+def _default_cli(cmd, ads, args, fail_if_no_services=True):
+    parser = MyArgParser(prog=cmd)
+    _add_services_arg(parser)
     parsed_args = parser.parse_args(args)
     return _resolve_selectors(ads, parsed_args.service, fail_if_no_services)
 
@@ -627,7 +631,7 @@ class AdsCommand:
         "help",
         "list",
         "up", "down", "bounce", "status",
-        "logs", "cat-logs", "list-logs",
+        "logs",
         "home"]
     verb_aliases = {
         "start": "up", "run": "up",
@@ -669,7 +673,7 @@ class AdsCommand:
         services = _default_cli("down", ads, args)
         if not all(map(lambda sp: _down(sp), services)):
             raise StopFailed("One or more services failed to stop")
-    
+
     def bounce(self, ads, args):
         services = _default_cli("bounce", ads, args)
         all_stopped = all(map(lambda sp: _down(sp), services))
@@ -683,21 +687,41 @@ class AdsCommand:
         services = _default_cli("status", ads, args, False)
         if not all(map(lambda sp: _status(sp), services)):
             raise SomeDown()
-    
+
     def logs(self, ads, args):
-        services = _default_cli("logs", ads, args, False)
-        if not _tail(_collect_logs_nonempty(services), ads.project):
-            raise InternalError("tail command failed")
-    
-    def list_logs(self, ads, args):
-        services = _default_cli("list-logs", ads, args, False)
-        print("\n".join(_collect_logs_nonempty(services)))
-    
-    def cat_logs(self, ads, args):
-        services = _default_cli("cat-logs", ads, args, False)
-        if not _cat(_collect_logs_nonempty(services)):
-            raise InternalError("cat command failed")
-    
+
+        parser = MyArgParser(prog="logs")
+        sub_cmd_gp = parser.add_mutually_exclusive_group()
+        sub_cmd_gp.add_argument(
+            "--tail",
+            action="store_true",
+            help="Default behavior: follow the logs with tail -f")
+        sub_cmd_gp.add_argument(
+            "--list",
+            action="store_true",
+            help="List the paths of all log files which exist "
+                 "(useful for pipelining)")
+        sub_cmd_gp.add_argument(
+            "--cat",
+            action="store_true",
+            help="Dump the contents of all log files to stdout")
+        _add_services_arg(parser)
+        parsed_args = parser.parse_args(args)
+
+        services = _resolve_selectors(ads, parsed_args.service, False)
+
+        if parsed_args.list:
+            print("\n".join(_collect_logs_nonempty(services)))
+
+        elif parsed_args.cat:
+            if not _cat(_collect_logs_nonempty(services)):
+                raise InternalError("cat command failed")
+
+        else:
+            # Assume --tail
+            if not _tail(_collect_logs_nonempty(services), ads.project):
+                raise InternalError("tail command failed")
+
     def home(self, ads, args):
         services = _default_cli("home", ads, args)
         print("\n".join(_collect_rel_homes(services)))
@@ -720,13 +744,11 @@ The most commonly used ads commands are:
   list        Print the list of available services
   up          Ensure the specified services are running
   down        Ensure the specified services are not running
-  bounce      Stop and restart the specified services
   status      Print status of the specified services
   logs        Tail the logs of the specified services
 
 Some less common commands:
-  cat-logs    Print logs to stdout
-  list-logs   Print paths to log files to stdout (for pipelining)
+  bounce      Stop and restart the specified services
   home        Print paths to the specified services' home directories
 """
 
