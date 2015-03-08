@@ -142,6 +142,22 @@ service/logs/stderr"
 stderr"
 }
 
+test_logs_commands_when_logs_missing() {
+    go_test_project one-trivial-service
+
+    assert_fails "ads list-logs" "No log files found"
+    assert_fails "ads cat-logs" "No log files found"
+}
+
+test_logs_commands_when_some_logs_missing() {
+    go_test_project interesting-hierarchy
+
+    touch burger/burger.log
+
+    assert_ok "ads list-logs" "burger.log"
+    assert_ok "ads cat-logs" "burger.log"
+}
+
 ###############################################################################
 # Obscure project layouts
 ###############################################################################

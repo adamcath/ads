@@ -451,6 +451,22 @@ class Ads:
 
 
 ##############################################
+# Customized ArgumentParser
+##############################################
+
+class MyArgParser(argparse.ArgumentParser):
+
+    def error(self, message):
+        if "too few arguments" in message:
+            # Default behavior of "ads" is too punishing
+            # This behavior matches git
+            self.print_help()
+            sys.exit(2)
+        else:
+            super(MyArgParser, self).error(message)
+
+
+##############################################
 # AdsCommand
 ##############################################
 
@@ -565,9 +581,51 @@ def _collect_rel_homes(services):
     return [s.resolve_home_relative_to_cwd() for s in services]
 
 
+def _default_cli(cmd, ads, args, fail_if_no_services=True):
+    parser = MyArgParser(prog=cmd)
+    parser.add_argument(
+        "service",
+        nargs="*",
+        help="The services or groups to act on")
+    parsed_args = parser.parse_args(args)
+    return _resolve_selectors(ads, parsed_args.service, fail_if_no_services)
+
+
+def _resolve_selectors(ads, selectors, fail_if_empty):
+
+    if len(selectors) == 0:
+        selectors = ["default"]
+
+    try:
+        service_names = reduce(frozenset.__or__,
+                               [ads.resolve(s) for s in selectors])
+    except BadSelectorException as e:
+        raise NotFound(str(e))
+
+    services = map(
+        lambda name: ads.project.services_by_name[name],
+        sorted(service_names))
+
+    if fail_if_empty and len(services) == 0:
+        raise NotFound("No services found that match '%s'" %
+                       ' '.join(selectors))
+
+    return services
+
+
+def _collect_logs_nonempty(services):
+        all_logs = _collect_logs(services)
+        if len(all_logs) == 0:
+            raise NotFound("No log files found for services " +
+                           str(services))
+        return all_logs
+
+
 class AdsCommand:
 
     verbs = [
+        "help",
+        "list",
         "up", "down", "bounce", "status",
         "logs", "cat-logs", "list-logs",
         "home"]
@@ -576,98 +634,73 @@ class AdsCommand:
         "stop": "down", "kill": "down",
         "restart": "bounce"}
 
-    def __init__(self, verb=None, selectors=None):
+    def __init__(self):
+        pass
+
+    @classmethod
+    def execute(cls, verb, ads, args):
         assert isinstance(verb, str)
-        assert isinstance(selectors, list)
+        assert isinstance(args, list)
+        assert isinstance(ads, Ads)
 
         if verb in AdsCommand.verb_aliases:
             verb = AdsCommand.verb_aliases[verb]
-        self.verb = verb
-        self.selectors = selectors
 
-    def execute(self, ads):
-
+        func_name = verb.replace("-", "_")
         try:
-            service_names = reduce(frozenset.__or__,
-                                   [ads.resolve(s) for s in self.selectors])
-        except BadSelectorException as e:
-            raise NotFound(str(e))
+            closure = getattr(AdsCommand(), func_name)
+        except:
+            raise InternalError("Bad command '%s'" % verb)
+        closure(ads, args)
 
-        services = map(
-            lambda name: ads.project.services_by_name[name],
-            sorted(service_names))
+    def help(self, ads, args):
+        AdsCommand.execute(args[0], ads, ["-h"])
 
-        def assert_services_nonempty():
-            if len(services) == 0:
-                raise NotFound("No services found that match '%s'" %
-                               ' '.join(self.selectors))
+    def list(self, ads, _):
+        ads.list()
 
-        def collect_logs_nonempty(use_msg):
-            all_logs = _collect_logs(services)
-            if len(all_logs) == 0:
-                raise NotFound(
-                    use_msg and
-                    "No log files found for services " + str(services) or
-                    None)
-            return all_logs
+    def up(self, ads, args):
+        services = _default_cli("up", ads, args)
+        info("Starting " + str(services))
+        if not all(map(lambda sp: _up(sp), services)):
+            raise StartFailed("One or more services failed to start")
 
-        if self.verb == "up":
-            assert_services_nonempty()
-            info("Starting " + str(services))
-            if not all(map(lambda sp: _up(sp), services)):
-                raise StartFailed("One or more services failed to start")
+    def down(self, ads, args):
+        services = _default_cli("down", ads, args)
+        if not all(map(lambda sp: _down(sp), services)):
+            raise StopFailed("One or more services failed to stop")
+    
+    def bounce(self, ads, args):
+        services = _default_cli("bounce", ads, args)
+        all_stopped = all(map(lambda sp: _down(sp), services))
+        all_started = all(map(lambda sp: _up(sp), services))
+        if not all_stopped:
+            raise StopFailed("One or more services failed to stop")
+        if not all_started:
+            raise StartFailed("One or more services failed to restart")
 
-        elif self.verb == "down":
-            assert_services_nonempty()
-            if not all(map(lambda sp: _down(sp), services)):
-                raise StopFailed("One or more services failed to stop")
-
-        elif self.verb == "bounce":
-            assert_services_nonempty()
-            all_stopped = all(map(lambda sp: _down(sp), services))
-            all_started = all(map(lambda sp: _up(sp), services))
-            if not all_stopped:
-                raise StopFailed("One or more services failed to stop")
-            if not all_started:
-                raise StartFailed("One or more services failed to restart")
-
-        elif self.verb == "status":
-            if not all(map(lambda sp: _status(sp), services)):
-                raise SomeDown()
-
-        elif self.verb == "logs":
-            if not _tail(collect_logs_nonempty(True), ads.project):
-                raise InternalError("tail command failed")
-
-        elif self.verb == "list-logs":
-            print("\n".join(collect_logs_nonempty(False)))
-
-        elif self.verb == "cat-logs":
-            if not _cat(collect_logs_nonempty(False)):
-                raise InternalError("cat command failed")
-
-        elif self.verb == "home":
-            assert_services_nonempty()
-            print("\n".join(_collect_rel_homes(services)))
-
-        else:
-            raise InternalError("Bad command '%s'" % self.verb)
-
-
-##############################################
-# Customized ArgumentParser
-##############################################
-
-class MyArgParser(argparse.ArgumentParser):
-
-    def error(self, message):
-        if "too few arguments" in message:
-            # Default behavior of "ads" is too punishing
-            # This behavior matches git
-            self.print_help()
-            sys.exit(2)
-        else:
-            super(MyArgParser, self).error(message)
+    def status(self, ads, args):
+        services = _default_cli("status", ads, args, False)
+        if not all(map(lambda sp: _status(sp), services)):
+            raise SomeDown()
+    
+    def logs(self, ads, args):
+        services = _default_cli("logs", ads, args, False)
+        if not _tail(_collect_logs_nonempty(services), ads.project):
+            raise InternalError("tail command failed")
+    
+    def list_logs(self, ads, args):
+        services = _default_cli("list-logs", ads, args, False)
+        print("\n".join(_collect_logs_nonempty(services)))
+    
+    def cat_logs(self, ads, args):
+        services = _default_cli("cat-logs", ads, args, False)
+        if not _cat(_collect_logs_nonempty(services)):
+            raise InternalError("cat command failed")
+    
+    def home(self, ads, args):
+        services = _default_cli("home", ads, args)
+        print("\n".join(_collect_rel_homes(services)))
 
 
 ##############################################
@@ -697,30 +730,23 @@ Some less common commands:
   home        Print paths to the specified services' home directories
 """
 
-    all_commands = (AdsCommand.verbs +
-                    AdsCommand.verb_aliases.keys() +
-                    ["list", "help"])
+    usage = "ads [-h] <command> [args] [service [service ...]]"
+
+    all_commands = AdsCommand.verbs + AdsCommand.verb_aliases.keys()
 
     parser = MyArgParser(
         prog="ads",
         description="Start, stop, and manage microservices in a codebase",
         epilog=epilog,
+        usage=usage,
         formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument(
         "command",
         metavar="<command>",
         choices=all_commands,
         help="Do something to a service")
-    parser.add_argument(
-        "service",
-        nargs="*",
-        help="The services or groups to act on")
 
-    args = parser.parse_args()
-
-    if args.command == "help":
-        parser.print_help()
-        return
+    args = parser.parse_args(sys.argv[1:2])
 
     profile_home = os.getenv("ADS_PROFILE_HOME")
     if not profile_home or len(profile_home) == 0:
@@ -731,15 +757,8 @@ Some less common commands:
         fail(1, "ads must be run from within an ads project. "
                 "See README for more.")
 
-    if len(args.service) == 0:
-        args.service = ["default"]
-
-    if args.command == "list":
-        ads.list()
-        return
-
     try:
-        AdsCommand(args.command, args.service).execute(ads)
+        AdsCommand.execute(args.command, ads, sys.argv[2:])
     except AdsCommandException as e:
         fail(e.exit_code, e.msg)
 

@@ -6,3 +6,6 @@ stop_cmd:
 
 status_cmd:
     echo "ok"
+
+log_paths:
+    - burger.log
