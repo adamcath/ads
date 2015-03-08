@@ -1,10 +1,10 @@
 # this service is nested inside another
 
-start:
+start_cmd:
     echo "started western"
 
-stop:
+stop_cmd:
     echo "stopped western"
 
-status:
+status_cmd:
     echo "ok"

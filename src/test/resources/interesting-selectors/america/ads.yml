@@ -1,8 +1,8 @@
-start:
+start_cmd:
     echo "started america"
 
-stop:
+stop_cmd:
     echo "stopped america"
 
-status:
+status_cmd:
     echo "ok"

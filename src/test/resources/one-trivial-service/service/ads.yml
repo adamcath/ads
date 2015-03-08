@@ -1,13 +1,13 @@
-start:
+start_cmd:
     bash service.sh 1>logs/stdout 2>logs/stderr &
 
-stop:
+stop_cmd:
     pgrep -f service.sh | xargs kill -9
 
-status:
+status_cmd:
     pgrep -f service.sh
 
-logs:
+log_paths:
     - logs/stdout
     - logs/stderr
 

@@ -145,10 +145,10 @@ class Service:
         return Service(name,
                        os.path.dirname(svc_yml),
                        spec.get("description"),
-                       spec.get("start"),
-                       spec.get("stop"),
-                       spec.get("status"),
-                       spec.get("logs"))
+                       spec.get("start_cmd"),
+                       spec.get("stop_cmd"),
+                       spec.get("status_cmd"),
+                       spec.get("log_paths"))
 
     @classmethod
     def as_printable_dict(cls, services):
@@ -156,21 +156,21 @@ class Service:
             (s.name, s.get_description_or_default()) for s in services])
 
     def __init__(self, name, home, description=None,
-                 start=None, stop=None, status=None, logs=None):
+                 start_cmd=None, stop_cmd=None, status_cmd=None, log_paths=None):
 
         self.name = name
         self.home = home
         self.description = description
 
-        self.start = start
-        self.stop = stop
-        self.status = status
+        self.start_cmd = start_cmd
+        self.stop_cmd = stop_cmd
+        self.status_cmd = status_cmd
 
-        self.logs = logs or []
+        self.log_paths = log_paths or []
 
     def resolve_logs_relative_to_cwd(self):
         result = []
-        for logfile in self.logs:
+        for logfile in self.log_paths:
             abs_log_glob = os.path.join(self.home, logfile)
             result = result + [
                 os.path.relpath(
@@ -494,34 +494,34 @@ def _cat(files):
 
 
 def _status(service):
-    if not service.status:
+    if not service.status_cmd:
         status = False
         msg = "status command not defined"
     else:
-        status = _shell(service.status, service.home)
+        status = _shell(service.status_cmd, service.home)
         msg = status and "ok" or "not running"
     info(service.name + ": " + msg)
     return status
 
 
 def _is_running(service):
-    return _shell(service.status, service.home)
+    return _shell(service.status_cmd, service.home)
 
 
 def _up(service):
-    if not service.status:
+    if not service.status_cmd:
         error("Status command not defined for " + service.name +
               "; can't tell if it's already running")
         return False
     if _is_running(service):
         info(service.name + " is already running.")
         return True
-    if not service.start:
+    if not service.start_cmd:
         error("Start command not defined for " + service.name)
         return False
     else:
         info("Starting " + service.name)
-        success = _shell(service.start, service.home)
+        success = _shell(service.start_cmd, service.home)
         if success:
             info("Started " + service.name)
         else:
@@ -530,18 +530,18 @@ def _up(service):
 
 
 def _down(service):
-    if not service.status:
+    if not service.status_cmd:
         error("Status command not defined for " + service.name +
               "; can't tell if it's already stopped")
         return False
     if not _is_running(service):
         info(service.name + " is already stopped.")
         return True
-    if not service.stop:
+    if not service.stop_cmd:
         error("Stop command not defined for " + service.name)
         return False
     else:
-        success = _shell(service.stop, service.home)
+        success = _shell(service.stop_cmd, service.home)
         if success:
             info("Stopped " + service.name)
         else:

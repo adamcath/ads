@@ -1,8 +1,8 @@
-start:
+start_cmd:
     echo "started burger"
 
-stop:
+stop_cmd:
     echo "stopped burger"
 
-status:
+status_cmd:
     echo "ok"

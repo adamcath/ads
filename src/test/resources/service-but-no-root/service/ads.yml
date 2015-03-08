@@ -1,8 +1,8 @@
-start:
+start_cmd:
     echo "started'
 
-stop:
+stop_cmd:
     exit "stopped"
 
-status:
+status_cmd:
     exit "ok"

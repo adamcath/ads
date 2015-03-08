@@ -14,19 +14,19 @@ To use ads, drop a file called `ads.yml` in each service's directory:
 description: 
     Web service that turns your ordinary app into badass rockstart tech.
 
-start:
+start_cmd:
     gradle run > obscure/logs/dir/out &
     # ads can be used with any build system -- it's just bash
 
-stop:
+stop_cmd:
     pgrep -f ninja-service | xargs kill -9
     # Still the most reliable way to kill a process
 
-status:
+status_cmd:
     pgrep -f ninja-service
     # Exit status indicates whether any process matched
 
-logs:
+log_paths:
     - obscure/logs/dir/*
     - even/more/secret/logs/dir/ninja.log
     # List any files with interesting output. Note the glob support
