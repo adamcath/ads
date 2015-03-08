@@ -151,6 +151,7 @@ test_empty_dir_gives_error() {
     assert_fails "ads list" "within an ads project"
     assert_fails "ads up" "within an ads project"
     assert_fails "ads down" "within an ads project"
+    assert_fails "ads home" "within an ads project"
 }
 
 test_root_with_no_services_gives_error() {
@@ -167,6 +168,7 @@ test_root_with_no_services_gives_error() {
         "all"
     assert_fails_silently "ads list-logs"
     assert_fails_silently "ads cat-logs"
+    assert_fails "ads home" "No services"
 }
 
 test_service_but_no_root_givess_error() {
@@ -175,6 +177,7 @@ test_service_but_no_root_givess_error() {
     assert_fails "ads list" "within an ads project"
     assert_fails "ads up" "within an ads project"
     assert_fails "ads down" "within an ads project"
+    assert_fails "ads home" "within an ads project"
 }
 
 test_nested_projects_and_services() {
@@ -188,6 +191,8 @@ test_nested_projects_and_services() {
         # Because nested projects form disjoint trees
     assert_contains "$top_listing" "all: burger, fries, western"
         # the default services
+    assert_contains "$(ads home all)" "burger" "fries" "burger/western"
+    assert_not_contains "$(ads home all)" "pizza" "pepperoni"
 
     cd burger
     local burger_listing="$(ads list)"
@@ -195,6 +200,8 @@ test_nested_projects_and_services() {
     assert_contains "$top_listing" "burger" "fries"
     assert_contains "$top_listing" "western"
     assert_not_contains "$top_listing" "pizza" "pepperoni"
+    assert_contains "$(ads home all)" "." "../fries" "western"
+        # Home should be relative
 
     cd ../pizza
     local pizza_listing="$(ads list)"
@@ -206,6 +213,7 @@ test_nested_projects_and_services() {
         # (note space before pizza; the word "pizza" does occur
         # as the name of the root project; subprojects appear
         # in a list starting with space)
+    assert_contains "$(ads home all)" "pepperoni"
 }
 
 ###############################################################################

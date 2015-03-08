@@ -137,6 +137,10 @@ def _load_spec_file(path):
 # Service
 ##############################################
 
+def _abs_to_cwd_rel(abspath):
+    return os.path.relpath(abspath, os.path.abspath(os.curdir))
+
+
 class Service:
 
     @classmethod
@@ -173,12 +177,13 @@ class Service:
         for logfile in self.log_paths:
             abs_log_glob = os.path.join(self.home, logfile)
             result = result + [
-                os.path.relpath(
-                    abs_log_file,
-                    os.path.abspath(os.curdir))
+                _abs_to_cwd_rel(abs_log_file)
                 for abs_log_file
                 in glob.iglob(abs_log_glob)]
         return result
+
+    def resolve_home_relative_to_cwd(self):
+        return _abs_to_cwd_rel(self.home)
 
     def get_description_or_default(self):
         return self.description or "(No description)"
@@ -556,9 +561,16 @@ def _collect_logs(services):
     return result
 
 
+def _collect_rel_homes(services):
+    return [s.resolve_home_relative_to_cwd() for s in services]
+
+
 class AdsCommand:
 
-    verbs = ["up", "down", "bounce", "status", "logs", "cat-logs", "list-logs"]
+    verbs = [
+        "up", "down", "bounce", "status",
+        "logs", "cat-logs", "list-logs",
+        "home"]
     verb_aliases = {
         "start": "up", "run": "up",
         "stop": "down", "kill": "down",
@@ -634,6 +646,10 @@ class AdsCommand:
             if not _cat(collect_logs_nonempty(False)):
                 raise InternalError("cat command failed")
 
+        elif self.verb == "home":
+            assert_services_nonempty()
+            print("\n".join(_collect_rel_homes(services)))
+
         else:
             raise InternalError("Bad command '%s'" % self.verb)
 
@@ -677,7 +693,8 @@ The most commonly used ads commands are:
 
 Some less common commands:
   cat-logs    Print logs to stdout
-  list-logs   Print paths to log files to stdout (for pipelining) 
+  list-logs   Print paths to log files to stdout (for pipelining)
+  home        Print paths to the specified services' home directories
 """
 
     all_commands = (AdsCommand.verbs +
