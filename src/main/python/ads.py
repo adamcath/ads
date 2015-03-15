@@ -107,7 +107,7 @@ def _shell(cmd_str, working_dir, quiet=False):
         status = 47
         pass
     cmd_file.close()
-    return status == 0
+    return status
 
 
 ##############################################
@@ -515,13 +515,14 @@ def _tail(files, project):
     project_rel_files = [
         os.path.relpath(os.path.abspath(f), project.home)
         for f in files]
-    return _shell(
-        "tail -F " + " \\\n\t".join(project_rel_files),
-        project.home)
+
+    status = _shell("tail -F " + " \\\n\t".join(project_rel_files), project.home)
+    return (status == 0 or
+            status == 47)  # tail was ended by ctrl+c (Mac OS)
 
 
 def _cat(files):
-    return _shell("cat " + " ".join(files), os.curdir)
+    return _shell("cat " + " ".join(files), os.curdir) == 0
 
 
 def _status(service):
@@ -529,14 +530,14 @@ def _status(service):
         status = False
         msg = "status command not defined"
     else:
-        status = _shell(service.status_cmd, service.home)
+        status = _shell(service.status_cmd, service.home) == 0
         msg = status and "ok" or "not running"
     info(service.name + ": " + msg)
     return status
 
 
 def _is_running(service):
-    return _shell(service.status_cmd, service.home)
+    return _shell(service.status_cmd, service.home) == 0
 
 
 def _up(service):
@@ -552,7 +553,7 @@ def _up(service):
         return False
     else:
         info("Starting " + service.name)
-        success = _shell(service.start_cmd, service.home)
+        success = _shell(service.start_cmd, service.home) == 0
         if success:
             info("Started " + service.name)
         else:
@@ -572,7 +573,7 @@ def _down(service):
         error("Stop command not defined for " + service.name)
         return False
     else:
-        success = _shell(service.stop_cmd, service.home)
+        success = _shell(service.stop_cmd, service.home) == 0
         if success:
             info("Stopped " + service.name)
         else:
