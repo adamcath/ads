@@ -750,6 +750,8 @@ The most commonly used ads commands are:
 Some less common commands:
   bounce      Stop and restart the specified services
   home        Print paths to the specified services' home directories
+
+See 'ads help <command>' to read about a specific subcommand.
 """
 
     usage = "ads [-h] <command> [args] [service [service ...]]"
