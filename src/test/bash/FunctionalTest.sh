@@ -161,8 +161,8 @@ stderr"
 test_logs_commands_when_logs_missing() {
     go_test_project one-trivial-service
 
-    assert_fails "ads logs --list" "No log files found"
-    assert_fails "ads logs --cat" "No log files found"
+    assert_fails "ads logs --list" "No general log files found"
+    assert_fails "ads logs --cat" "No general log files found"
 }
 
 test_logs_commands_when_some_logs_missing() {
@@ -172,6 +172,24 @@ test_logs_commands_when_some_logs_missing() {
 
     assert_ok "ads logs --list" "burger.log"
     assert_ok "ads logs --cat" "burger.log"
+}
+
+test_general_vs_error_logs() {
+    go_test_project one-trivial-service
+
+    assert_ok "ads up"
+
+    # --general and --errors are disjoint
+    local logs_listing="$(ads logs --list --general)"
+    assert_contains "$logs_listing" "stdout" "stderr"
+    assert_not_contains "$logs_listing" "other_err"
+
+    local errors_listing="$(ads logs --list --errors)"
+    assert_contains "$errors_listing" "stderr" "other_err"
+    assert_not_contains "$errors_listing" "stdout"
+
+    # Default is --general
+    assert_equal "$(ads logs --list)" "$(ads logs --list --general)"
 }
 
 ###############################################################################

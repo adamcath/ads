@@ -11,5 +11,9 @@ log_paths:
     - logs/stdout
     - logs/stderr
 
+err_log_paths:
+    - logs/stderr
+    - logs/other_err
+
 description:
     A rather trivial service

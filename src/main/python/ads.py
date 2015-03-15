@@ -152,7 +152,8 @@ class Service:
                        spec.get("start_cmd"),
                        spec.get("stop_cmd"),
                        spec.get("status_cmd"),
-                       spec.get("log_paths"))
+                       spec.get("log_paths"),
+                       spec.get("err_log_paths"))
 
     @classmethod
     def as_printable_dict(cls, services):
@@ -160,7 +161,8 @@ class Service:
             (s.name, s.get_description_or_default()) for s in services])
 
     def __init__(self, name, home, description=None,
-                 start_cmd=None, stop_cmd=None, status_cmd=None, log_paths=None):
+                 start_cmd=None, stop_cmd=None, status_cmd=None,
+                 log_paths=None, err_log_paths=None):
 
         self.name = name
         self.home = home
@@ -171,10 +173,18 @@ class Service:
         self.status_cmd = status_cmd
 
         self.log_paths = log_paths or []
+        self.err_log_paths = err_log_paths or []
 
-    def resolve_logs_relative_to_cwd(self):
+    def resolve_logs_relative_to_cwd(self, log_type):
+        if log_type == "general":
+            log_paths = self.log_paths
+        elif log_type == "error":
+            log_paths = self.err_log_paths
+        else:
+            assert False, "Unknown log_type %s" % log_type
+
         result = []
-        for logfile in self.log_paths:
+        for logfile in log_paths:
             abs_log_glob = os.path.join(self.home, logfile)
             result = result + [
                 _abs_to_cwd_rel(abs_log_file)
@@ -320,7 +330,7 @@ def _adsfiles_to_service_names(adsfiles):
     for f in adsfiles:
         basename = os.path.basename(os.path.dirname(f))
         if basename in svc_name_to_file:
-            raise Exception("not yet implemented")
+            raise Exception("not yet implemented")  # TODO
         svc_name_to_file[basename] = f
         file_to_svc_name[f] = basename
     return file_to_svc_name
@@ -570,13 +580,6 @@ def _down(service):
         return success
 
 
-def _collect_logs(services):
-    result = []
-    for sp in services:
-        result += sp.resolve_logs_relative_to_cwd()
-    return result
-
-
 def _collect_rel_homes(services):
     return [s.resolve_home_relative_to_cwd() for s in services]
 
@@ -617,12 +620,16 @@ def _resolve_selectors(ads, selectors, fail_if_empty):
     return services
 
 
-def _collect_logs_nonempty(services):
-        all_logs = _collect_logs(services)
-        if len(all_logs) == 0:
-            raise NotFound("No log files found for services " +
-                           str(services))
-        return all_logs
+def _collect_logs_nonempty(services, log_type):
+    all_logs = []
+    for s in services:
+        all_logs += s.resolve_logs_relative_to_cwd(log_type)
+
+    if len(all_logs) == 0:
+        raise NotFound("No %s log files found for services %s" %
+                       (log_type, str(services)))
+
+    return all_logs
 
 
 class AdsCommand:
@@ -695,7 +702,7 @@ class AdsCommand:
         sub_cmd_gp.add_argument(
             "--tail",
             action="store_true",
-            help="Default behavior: follow the logs with tail -f")
+            help="(Default) Follow the logs with tail -f")
         sub_cmd_gp.add_argument(
             "--list",
             action="store_true",
@@ -705,21 +712,36 @@ class AdsCommand:
             "--cat",
             action="store_true",
             help="Dump the contents of all log files to stdout")
+        which_logs_gp = parser.add_mutually_exclusive_group()
+        which_logs_gp.add_argument(
+            "--general",
+            action="store_true",
+            help="(Default) Show the general logs specified by the "
+                 "log_paths field")
+        which_logs_gp.add_argument(
+            "--errors",
+            action="store_true",
+            help="Show the error logs specified by the err_log_paths field")
         _add_services_arg(parser)
         parsed_args = parser.parse_args(args)
 
+        if parsed_args.errors:
+            log_type = "error"
+        else:
+            # Default
+            log_type = "general"
+
         services = _resolve_selectors(ads, parsed_args.service, False)
+        resolved_log_paths = _collect_logs_nonempty(services, log_type)
 
         if parsed_args.list:
-            print("\n".join(_collect_logs_nonempty(services)))
-
+            print("\n".join(resolved_log_paths))
         elif parsed_args.cat:
-            if not _cat(_collect_logs_nonempty(services)):
+            if not _cat(resolved_log_paths):
                 raise InternalError("cat command failed")
-
         else:
-            # Assume --tail
-            if not _tail(_collect_logs_nonempty(services), ads.project):
+            # Default
+            if not _tail(resolved_log_paths, ads.project):
                 raise InternalError("tail command failed")
 
     def home(self, ads, args):
