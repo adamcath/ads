@@ -1,22 +1,19 @@
 # Overview
 
 Microservices are great, but running them on your dev box is annoying. Each one
-has its own commands to start and stop, check status...and how are you supposed
+has its own commands to start and stop, check status - and how are you supposed
 to know where the logs are?
 
-ads addresses this problem by requiring each participating service to expose a
-simple uniform interface for the most common commands: start, stop, status, and
+ads fixes this by requiring each participating service to expose a simple 
+uniform interface for the most common commands: start, stop, status, and
 log locations.
 
 To use ads, drop a file called `ads.yml` in each service's directory:
 
 ```
-description: 
-    Web service that turns your ordinary app into badass rockstart tech.
-
 start_cmd:
     gradle run > obscure/logs/dir/out &
-    # ads can be used with any build system -- it's just bash
+    # ads can be used with any build system - cmds are just bash
 
 stop_cmd:
     pgrep -f ninja-service | xargs kill -9
@@ -28,80 +25,247 @@ status_cmd:
 
 log_paths:
     - obscure/logs/dir/*
-    - even/more/secret/logs/dir/ninja.log
-    # List any files with interesting output. Note the glob support
+    - even/more/secret/logs/dir/**/ninja.log
+    # Note the glob support
+    
+description: 
+    Web service that turns your ordinary app into badass rockstart tech.
+    # Optional but a good idea
 ```
 
-And one more, called `adsroot.yml`, in the root of your codebase:
+There are more fields, but this will get you started.
+
+Create one more file called `adsroot.yml`, in the root of your codebase:
 
 ```
-# Actually, there's nothing to put here yet.
+# Actually, you don't need to put anything in it yet.
 # The existence of the file is sufficient.
 ```
 
 Now you can run ads from anywhere in the codebase and get at any of the services.
 
 ```
-~/codebase/ninja $ ads list
+$ cd /anywhere/in/codebase
+$ ads list
    ninja: Web service that turns your ordinary app into badass rockstart tech.
-  io-tld: Converts a domain into the domain of a company which is crushing it.
-webscale: (No description)
 ```
 
-## Starting a single service
+# A brief tour
 
+You should follow along!
 ```
-~/codebase/ninja $ ads up ninja
-cd ~/codebase/ninja
-gradle run > obscure/logs/dir/out &
---- Started ninja-service
-
-### up is idempotent
-~/codebase/ninja $ ads up ninja
---- ninja-service is already running
+$ cd ads/docs/samples/intro
 ```
 
-## Stopping a single service
-
+What do we got here?
 ```
-~/codebase/ninja $ ads down ninja
-cd ~/codebase/ninja
-pgrep -f ninja-service | xargs kill -9
---- Stopped ninja-service
+$ ads list
+All services in current project (intro):
+     ninja: Slices and chops, mostly
+        db: (No description)
+    pirate: Walks the plank and shivers timbers
+...
+# We'll come back to the rest of this stuff
 ```
 
-## Following logs
-
+Let's start a service:
 ```
-~/codebase/ninja $ ads logs   # You could specify a service; default is all
-tail -F ~/codebase/ninja/obscure/logs/dir/out ~/codebase/webscale/logs/webscale.log
+$ ads up ninja
+--- Starting [ninja]
+--- Checking if ninja is already running
+cd /intro/./ninja
+pgrep -f ninja.sh
+--- Starting ninja
+cd /intro/./ninja
+mkdir logs
+bash ninja.sh >logs/ninja.out 2>logs/ninja.err &
+--- Started ninja
+```
 
-==> ~/codebase/ninja/obscure/logs/dir/out <==
-some log lines from ninja
-and a few more
-etc etc
+Note that ads shows you what it's doing. We think this is important. 
 
-==> ~/codebase/webscale/logs/webscale.log <==
-tail will just switch to the other log file when somebody writes to it
+Up is idempotent, so you don't have to remember what state it was in:
+```
+$ ads up ninja
+--- Starting [ninja]
+--- Checking if ninja is already running
+cd /intro/./ninja
+pgrep -f ninja.sh
+4743
+--- ninja is already running
+```
 
+Too much chopping; let's stop ninja:
+```
+$ ads down ninja
+--- Checking if ninja is running
+cd /intro/./ninja
+pgrep -f ninja.sh
+4863
+--- Stopping ninja
+cd /intro/./ninja
+pgrep -f ninja.sh | xargs kill -9
+--- Stopped ninja
+```
+
+I forget, is ninja up?
+```
+$ ads status ninja
+cd /intro/./ninja
+pgrep -f ninja.sh
+--- ninja: not running
+```
+
+Any command can take a list of services:
+```
+$ ads up ninja pirate
+--- Starting [ninja, pirate]
 ...
 ```
 
+If you don't say which service, ads does 'em all (you can override this by setting 
+`default` in adsroot.yml or ~/.ads_profile.yml):
+```
+$ ads status
+cd /Users/arc/Projects/ads/doc/samples/intro/./db
+pgrep -f db.sh
+--- db: not running
+cd /Users/arc/Projects/ads/doc/samples/intro/./ninja
+pgrep -f ninja.sh
+5018
+--- ninja: ok
+cd /Users/arc/Projects/ads/doc/samples/intro/./pirate
+pgrep -f pirate.sh
+5024
+--- pirate: ok
+```
+
+Let's tail the logs:
+```
+$ ads logs
+cd /Users/arc/Projects/ads/doc/samples/intro
+tail -F ninja/logs/ninja.err \
+	ninja/logs/ninja.out \
+	pirate/logs/treasure-chest/pirate.err \
+	pirate/logs/treasure-chest/pirate.log
+
+==> ninja/logs/ninja.err <==
+
+==> ninja/logs/ninja.out <==
+Chop!
+Chop!
+
+==> pirate/logs/treasure-chest/pirate.err <==
+
+==> pirate/logs/treasure-chest/pirate.log <==
+Arrrrr!
+Arrrrr!
+```
+
+tail -F works pretty well with multiple log files, but if you want to 
+focus on one, just specify the service.
+
+The logs command has some cool variants:
+```
+$ ads help logs
+usage: logs [-h] [--tail | --list | --cat] [--general | --errors]
+            [service [service ...]]
+...
+  --tail      (Default) Follow the logs with tail -f
+  --list      List the paths of all log files which exist (useful for
+              pipelining)
+  --cat       Dump the contents of all log files to stdout
+```
+
+
 # Getting started
 
-## Dependencies
+### Dependencies
 
-- python: ads has been tested with 2.7.8 on Mac
+- ads has been tested with python 2.7.8 on Mac OS Yosemite
+- python
 - pyyaml: install with `sudo pip install pyyaml` or `sudo easy_install pyyaml`
+- shell stuff available on any Unixy OS (`find`, `bash`, `tail`, `cat`) 
 
-## Installing
+### Installing
 
 - `git clone https://github.com/adamcath/ads.git`
-- Add ads/bin to your $PATH
+- Add ads/bin to your `$PATH`
 
-## Testing
+### Testing
 
-- Go to an ads project (try one in src/test/resources, like 
-  `interesting-selectors`) and type `ads list`
+- Go to an ads project (try doc/samples/intro) and type `ads list`
 - Now try adding ads to your project by following the overview above
 - (If you like, you can run tests with `./gradlew test functionalTest`)
+
+
+# FAQ
+
+#### My service needs some one-time setup before it runs. How do I tell ads this?
+
+This is a common scenario; for example, you may need to set up the DB schema 
+before you can start anything. ads doesn't have a solution for this yet. Your
+service should probably try to detect the missing precondition, refuse to
+start, and direct the user to the relevant wiki page.
+
+#### Does ads have a concept of dependencies?
+
+No. This is one area where ads is opinionated: in production, any service could
+go down, and the other services would have to be able to deal with that.
+The dependant service might go unhealthy, but it shouldn't crash. Therefore, 
+starting in an arbitrary order is a special case of the general problem,
+which you cannot avoid, of some services being up and others being down.
+
+tl;dr: If a service can't run without another running, they're actually one service.
+
+#### Can I specify a "build" step separate from "run"?
+
+No. If running requires building, it should just do it. If that's slow, then
+improve your project's build avoidance to reduce rebuilds.
+
+#### Why isn't this just...
+ 
+##### part of the build system?
+
+- Big projects often involve multiple languages and build systems.
+  I wanted a uniform way to run them all.
+- How would you get the composability (run one thing, run three things,
+  run everything, run this group)?
+
+##### an init.d script (or similar)?
+
+ads is inspired by service managers, but:
+- I don't want to "install" each service on my dev box. That would raise
+  awkward questions about what happens when I change the code. I want
+  to run things straight from source.
+- init.d scripts are pretty fugly. Maybe other service managers are better;
+  if so I'd be curious to learn about them.
+- If this were a good solution, people would be doing it.
+
+##### some project-specific helper scripts?
+
+In my experience, codebases frequently evolve a set of helper scripts that 
+make it tolerable to deal with multiple projects. They work well when there's 
+one command to rule them all, but somebody wants a way to _just restart my stuff_. 
+This is where these scripts break down, as they weren't designed to be composed
+in that way. Then you end up with an unusable and unmaintainable spaghetti script.
+Perhaps your script will evolve into something like ads, but then...you could
+have just used ads!
+
+##### docker?
+
+docker solves a very different problem, but I haven't tried docker yet (gasp!),
+so I'm not totally sure. I suspect ads will still make sense with docker. 
+I'd love to hear your experiences with docker + ads, or with docker somehow
+making ads irrelevant.
+
+
+# Advanced stuff
+
+### groups
+
+TODO
+
+### defaults
+
+TODO

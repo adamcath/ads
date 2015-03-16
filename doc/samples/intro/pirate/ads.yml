@@ -1,0 +1,16 @@
+description:
+    Walks the plank and shivers timbers
+
+start_cmd:
+|
+    mkdir -p logs/treasure-chest
+    bash pirate.sh >logs/treasure-chest/pirate.log 2>logs/treasure-chest/pirate.err &
+
+stop_cmd:
+    pgrep -f pirate.sh | xargs kill -9
+
+status_cmd:
+    pgrep -f pirate.sh
+
+log_paths:
+    - logs/**/*

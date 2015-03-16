@@ -545,8 +545,10 @@ def _up(service):
         error("Status command not defined for " + service.name +
               "; can't tell if it's already running")
         return False
+
+    info("Checking if %s is already running" % service.name)
     if _is_running(service):
-        info(service.name + " is already running.")
+        info(service.name + " is already running")
         return True
     if not service.start_cmd:
         error("Start command not defined for " + service.name)
@@ -566,13 +568,16 @@ def _down(service):
         error("Status command not defined for " + service.name +
               "; can't tell if it's already stopped")
         return False
+
+    info("Checking if %s is running" % service.name)
     if not _is_running(service):
-        info(service.name + " is already stopped.")
+        info(service.name + " is already stopped")
         return True
     if not service.stop_cmd:
         error("Stop command not defined for " + service.name)
         return False
     else:
+        info("Stopping %s" % service.name)
         success = _shell(service.stop_cmd, service.home) == 0
         if success:
             info("Stopped " + service.name)
