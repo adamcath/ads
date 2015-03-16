@@ -1,0 +1,8 @@
+start_cmd:
+    bash db.sh &
+
+stop_cmd:
+    pgrep -f db.sh | xargs kill -9
+
+status_cmd:
+    pgrep -f db.sh

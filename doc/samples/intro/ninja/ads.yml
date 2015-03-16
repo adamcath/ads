@@ -1,0 +1,16 @@
+description:
+    Slices and chops, mostly
+
+start_cmd:
+|
+    mkdir logs
+    bash ninja.sh >logs/ninja.out 2>logs/ninja.err &
+
+stop_cmd:
+    pgrep -f ninja.sh | xargs kill -9
+
+status_cmd:
+    pgrep -f ninja.sh
+
+log_paths:
+    - logs/*
