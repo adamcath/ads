@@ -735,13 +735,16 @@ class AdsCommand:
             raise InternalError("Bad command '%s'" % verb)
         closure(ads, args)
 
-    def help(self, ads, args):
+    @staticmethod
+    def help(ads, args):
         AdsCommand.execute(args[0], ads, ["-h"])
 
-    def list(self, ads, _):
+    @staticmethod
+    def list(ads, _):
         ads.list()
 
-    def up(self, ads, args):
+    @staticmethod
+    def up(ads, args):
         parser = MyArgParser(prog="up")
         _add_verbose_arg(parser)
         _add_services_arg(parser)
@@ -752,7 +755,8 @@ class AdsCommand:
         if not all(map(lambda sp: _up(sp, parsed_args.verbose), services)):
             raise StartFailed("One or more services failed to start")
 
-    def down(self, ads, args):
+    @staticmethod
+    def down(ads, args):
         parser = MyArgParser(prog="down")
         _add_verbose_arg(parser)
         _add_services_arg(parser)
@@ -761,7 +765,8 @@ class AdsCommand:
         if not all(map(lambda sp: _down(sp, parsed_args.verbose), services)):
             raise StopFailed("One or more services failed to stop")
 
-    def bounce(self, ads, args):
+    @staticmethod
+    def bounce(ads, args):
         parser = MyArgParser(prog="bounce")
         _add_verbose_arg(parser)
         _add_services_arg(parser)
@@ -776,7 +781,8 @@ class AdsCommand:
         if not all_started:
             raise StartFailed("One or more services failed to restart")
 
-    def status(self, ads, args):
+    @staticmethod
+    def status(ads, args):
         parser = MyArgParser(prog="status")
         _add_verbose_arg(parser)
         _add_services_arg(parser)
@@ -785,7 +791,8 @@ class AdsCommand:
         if not all(map(lambda sp: _status(sp, parsed_args.verbose), services)):
             raise SomeDown()
 
-    def logs(self, ads, args):
+    @staticmethod
+    def logs(ads, args):
 
         parser = MyArgParser(prog="logs")
         sub_cmd_gp = parser.add_mutually_exclusive_group()
@@ -834,14 +841,16 @@ class AdsCommand:
             if not _tail(resolved_log_paths, ads.project):
                 raise InternalError("tail command failed")
 
-    def home(self, ads, args):
+    @staticmethod
+    def home(ads, args):
         parser = MyArgParser(prog="home")
         _add_services_arg(parser)
         parsed_args = parser.parse_args(args)
         services = _resolve_selectors(ads, parsed_args.service, True)
         print("\n".join(_collect_rel_homes(services)))
 
-    def edit(self, ads, args):
+    @staticmethod
+    def edit(ads, args):
         parser = MyArgParser(prog="edit")
         _add_services_arg(parser)
         parsed_args = parser.parse_args(args)
