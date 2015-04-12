@@ -54,6 +54,7 @@ $ ads list
 
 You should follow along!
 ```
+$ git clone https://github.com/adamcath/ads.git
 $ cd ads/docs/samples/intro
 ```
 
