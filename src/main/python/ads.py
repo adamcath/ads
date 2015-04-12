@@ -9,18 +9,29 @@
 import sys
 
 
+class colors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
 def debug(msg):
-    print(msg)
+    print(colors.OKBLUE + msg + colors.ENDC)
     sys.stdout.flush()
 
 
 def info(msg):
-    print("--- " + msg)
+    print(colors.OKGREEN + "--- " + msg + colors.ENDC)
     sys.stdout.flush()
 
 
 def error(msg):
-    sys.stderr.write("!!! " + msg + "\n")
+    sys.stderr.write(colors.FAIL + "!!! " + msg + "\n" + colors.ENDC)
     sys.stderr.flush()
 
 
@@ -552,7 +563,7 @@ def _status(service, verbose):
         msg = "status command not defined"
     else:
         if verbose:
-            info("Checking if %s is running" % service.name)
+            debug("Checking if %s is running" % service.name)
         running = _shell(service.status_cmd,
                          service.home,
                          verbose and STREAM or NULL)[0] == 0
@@ -575,7 +586,7 @@ def _up(service, verbose):
               "; can't tell if it's already running")
         return False
     if verbose:
-        info("Checking if %s is already running" % service.name)
+        debug("Checking if %s is already running" % service.name)
     if _is_running(service, verbose):
         info(service.name + " is already running")
         return True
@@ -591,7 +602,7 @@ def _up(service, verbose):
                            verbose and STREAM or BUFFER)
     if status == 0:
         if verbose:
-            info("Started " + service.name)
+            debug("Started " + service.name)
         return True
     else:
         error("Failed to start " + service.name)
@@ -612,7 +623,7 @@ def _down(service, verbose):
               "; can't tell if it's already stopped")
         return False
     if verbose:
-        info("Checking if %s is running" % service.name)
+        debug("Checking if %s is running" % service.name)
     if not _is_running(service, verbose):
         info(service.name + " is already stopped")
         return True
@@ -628,7 +639,7 @@ def _down(service, verbose):
                            verbose and STREAM or BUFFER)
     if status == 0:
         if verbose:
-            info("Stopped " + service.name)
+            debug("Stopped " + service.name)
         return True
     else:
         error("Failed to stop " + service.name)
