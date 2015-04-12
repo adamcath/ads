@@ -220,37 +220,43 @@ improve your project's build avoidance to reduce rebuilds.
  
 ##### part of the build system?
 
+- Building is a very general problem, and build systems are quite flexible.
+  This flexibility comes at a cost: even in a well-factored build system, 
+  you always have to figure out which targets you're supposed to run. 
+  ads is a "run" system, not a build system, so it can be restricted to
+  a fixed set of commands - the ones you need to run services. 
 - Big projects often involve multiple languages and build systems.
   I wanted a uniform way to run them all.
-- How would you get the composability (run one thing, run three things,
-  run everything, run this group)?
+- It's fairly annoying to implement things like `ads logs` in most build 
+  systems. I wanted to make it trivial for developers to do the right thing.
 
 ##### an init.d script (or similar)?
 
-ads is inspired by service managers, but:
+ads is inspired by OS service managers, but:
 - I don't want to "install" each service on my dev box. That would raise
   awkward questions about what happens when I change the code. I want
   to run things straight from source.
 - init.d scripts are pretty fugly. Maybe other service managers are better;
-  if so I'd be curious to learn about them.
-- If this were a good solution, people would be doing it.
+  if so, I'd be curious to learn about them.
+- I suspect that if this were a good solution, people would be doing it.
 
 ##### some project-specific helper scripts?
 
-In my experience, codebases frequently evolve a set of helper scripts that 
+In my experience, code bases frequently evolve a set of helper scripts that 
 make it tolerable to deal with multiple projects. They work well when there's 
-one command to rule them all, but somebody wants a way to _just restart my stuff_. 
-This is where these scripts break down, as they weren't designed to be composed
-in that way. Then you end up with an unusable and unmaintainable spaghetti script.
-Perhaps your script will evolve into something like ads, but then...you could
-have just used ads!
+one command to rule them all, but then somebody wants a way to _just restart my 
+stuff_. Now you add some commands to just do that. It becomes very hard to
+prevent spaghetti unless you end up designing something like ads, which lets
+you freely compose commands with services. But then...you could have just 
+used ads!
 
-##### docker?
+##### docker/vagrant/virtualization tech x?
 
-docker solves a very different problem, but I haven't tried docker yet (gasp!),
-so I'm not totally sure. I suspect ads will still make sense with docker. 
-I'd love to hear your experiences with docker + ads, or with docker somehow
-making ads irrelevant.
+Virtualization solves a very different set of problems - primarily service 
+isolation. That said, I haven't tried docker yet (gasp!), so I'm not totally 
+sure. I suspect ads will still make sense with docker (`ads up` would build and 
+spin up a container). I'd love to hear your experiences with docker + ads, 
+or if docker somehow making ads irrelevant.
 
 
 # Advanced stuff
