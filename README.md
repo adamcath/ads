@@ -71,7 +71,7 @@ All services in current project (intro):
 
 Let's start a service:
 ```
-$ ads up ninja
+$ ads up -v ninja
 --- Starting [ninja]
 --- Checking if ninja is already running
 cd /intro/./ninja
@@ -83,11 +83,11 @@ bash ninja.sh >logs/ninja.out 2>logs/ninja.err &
 --- Started ninja
 ```
 
-Note that ads shows you what it's doing. We think this is important. 
+-v makes ads show you what it's doing. You can usually omit it.
 
 Up is idempotent, so you don't have to remember what state it was in:
 ```
-$ ads up ninja
+$ ads up -v ninja
 --- Starting [ninja]
 --- Checking if ninja is already running
 cd /intro/./ninja
@@ -98,7 +98,7 @@ pgrep -f ninja.sh
 
 Too much chopping; let's stop ninja:
 ```
-$ ads down ninja
+$ ads down -v ninja
 --- Checking if ninja is running
 cd /intro/./ninja
 pgrep -f ninja.sh
@@ -111,7 +111,7 @@ pgrep -f ninja.sh | xargs kill -9
 
 I forget, is ninja up?
 ```
-$ ads status ninja
+$ ads status -v ninja
 cd /intro/./ninja
 pgrep -f ninja.sh
 --- ninja: not running
@@ -119,7 +119,7 @@ pgrep -f ninja.sh
 
 Any command can take a list of services:
 ```
-$ ads up ninja pirate
+$ ads up -v ninja pirate
 --- Starting [ninja, pirate]
 ...
 ```
@@ -128,16 +128,8 @@ If you don't say which service, ads does 'em all (you can override this by setti
 `default` in adsroot.yml or ~/.ads_profile.yml):
 ```
 $ ads status
-cd /Users/arc/Projects/ads/doc/samples/intro/./db
-pgrep -f db.sh
 --- db: not running
-cd /Users/arc/Projects/ads/doc/samples/intro/./ninja
-pgrep -f ninja.sh
-5018
 --- ninja: ok
-cd /Users/arc/Projects/ads/doc/samples/intro/./pirate
-pgrep -f pirate.sh
-5024
 --- pirate: ok
 ```
 
