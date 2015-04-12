@@ -709,7 +709,8 @@ class AdsCommand:
         "list",
         "up", "down", "bounce", "status",
         "logs",
-        "home"]
+        "home",
+        "edit"]
     verb_aliases = {
         "start": "up", "run": "up",
         "stop": "down", "kill": "down",
@@ -840,6 +841,16 @@ class AdsCommand:
         services = _resolve_selectors(ads, parsed_args.service, True)
         print("\n".join(_collect_rel_homes(services)))
 
+    def edit(self, ads, args):
+        parser = MyArgParser(prog="edit")
+        _add_services_arg(parser)
+        parsed_args = parser.parse_args(args)
+        services = _resolve_selectors(ads, parsed_args.service, True)
+        homes = _collect_rel_homes(services)
+        ymls = [os.path.join(home, "ads.yml") for home in homes]
+        editor = os.environ.get('EDITOR','vi')
+        subprocess.call([editor] + ymls)
+
 
 ##############################################
 # main
@@ -863,6 +874,7 @@ The most commonly used ads commands are:
 Some less common commands:
   bounce      Stop and restart the specified services
   home        Print paths to the specified services' home directories
+  edit        Edit a service's ads.yml
 
 See 'ads help <command>' to read about a specific subcommand.
 """

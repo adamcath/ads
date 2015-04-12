@@ -359,6 +359,20 @@ test_default_selector_is_all_when_none_defined() {
 }
 
 ###############################################################################
+# edit
+###############################################################################
+
+test_edit() {
+    go_test_project interesting-hierarchy
+
+    # Hard to test launching a real editor. We just want to test that
+    # ads home invokes $EDITOR path/to/first/ads.yml path/to/second/ads.yml,
+    # which we can fake with cat
+    EDITOR="cat" assert_ok "ads edit burger fries" \
+        "started burger" "started fries"
+}
+
+###############################################################################
 # main()
 ###############################################################################
 
