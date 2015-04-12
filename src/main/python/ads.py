@@ -107,7 +107,6 @@ NULL = "null"
 
 
 def _shell(cmd_str, working_dir, output_mode=STREAM):
-
     if output_mode == STREAM:
         out_file = None
     elif output_mode == BUFFER:
@@ -436,14 +435,21 @@ class Profile:
 ##############################################
 
 class Ads:
-    @classmethod
-    def load(cls, root_dir, profile_dir):
+    @staticmethod
+    def load_from_fs(root_dir, profile_dir):
         project = Project.load_from_dir(root_dir)
         if not project:
             return None
 
         profile = Profile.load_from_dir(profile_dir) or Profile()
         return Ads(project, profile)
+
+    @staticmethod
+    def load_from_env():
+        profile_home = os.getenv("ADS_PROFILE_HOME")
+        if not profile_home or len(profile_home) == 0:
+            profile_home = os.path.expanduser("~")
+        return Ads.load_from_fs(os.curdir, profile_home)
 
     def __init__(self, project, profile=Profile()):
         self.project = project
@@ -517,6 +523,11 @@ class AdsCommandException(Exception):
         self.msg = msg
 
 
+class UsageError(AdsCommandException):
+    def __init__(self, msg):
+        super(UsageError, self).__init__(2, msg)
+
+
 class NotFound(AdsCommandException):
     def __init__(self, msg):
         super(NotFound, self).__init__(11, msg)
@@ -540,6 +551,15 @@ class StopFailed(AdsCommandException):
 class SomeDown(AdsCommandException):
     def __init__(self):
         super(SomeDown, self).__init__(23)
+
+
+def _load_or_die():
+    ads = Ads.load_from_env()
+    if not ads:
+        raise UsageError(
+            "ads must be run from within an ads project. "
+            "See README for more.")
+    return ads
 
 
 def _tail(files, project):
@@ -579,7 +599,6 @@ def _is_running(service, verbose):
 
 
 def _up(service, verbose):
-
     # Is it running?
     if not service.status_cmd:
         error("Status command not defined for " + service.name +
@@ -616,7 +635,6 @@ def _up(service, verbose):
 
 
 def _down(service, verbose):
-
     # Is it running?
     if not service.status_cmd:
         error("Status command not defined for " + service.name +
@@ -703,162 +721,184 @@ def _collect_logs_nonempty(services, log_type):
     return all_logs
 
 
-class AdsCommand:
-    verbs = [
-        "help",
-        "list",
-        "up", "down", "bounce", "status",
-        "logs",
-        "home",
-        "edit"]
-    verb_aliases = {
-        "start": "up", "run": "up",
-        "stop": "down", "kill": "down",
-        "restart": "bounce"}
+def list_func(args):
+    parser = MyArgParser(prog=cmd_list.name, description=cmd_list.description)
+    parser.parse_args(args)
+    ads = _load_or_die()
+    ads.list()
 
-    def __init__(self):
-        pass
 
-    @classmethod
-    def execute(cls, verb, ads, args):
-        assert isinstance(verb, str)
-        assert isinstance(args, list)
-        assert isinstance(ads, Ads)
+def up(args):
+    parser = MyArgParser(prog=cmd_up.name, description=cmd_up.description)
+    _add_verbose_arg(parser)
+    _add_services_arg(parser)
+    parsed_args = parser.parse_args(args)
+    ads = _load_or_die()
+    services = _resolve_selectors(ads, parsed_args.service, True)
+    if len(services) > 1:
+        info("Starting " + str(services))
+    if not all(map(lambda sp: _up(sp, parsed_args.verbose), services)):
+        raise StartFailed("One or more services failed to start")
 
-        if verb in AdsCommand.verb_aliases:
-            verb = AdsCommand.verb_aliases[verb]
 
-        func_name = verb.replace("-", "_")
-        try:
-            closure = getattr(AdsCommand(), func_name)
-        except:
-            raise InternalError("Bad command '%s'" % verb)
-        closure(ads, args)
+def down(args):
+    parser = MyArgParser(prog=cmd_down.name, description=cmd_down.description)
+    _add_verbose_arg(parser)
+    _add_services_arg(parser)
+    parsed_args = parser.parse_args(args)
+    ads = _load_or_die()
+    services = _resolve_selectors(ads, parsed_args.service, True)
+    if not all(map(lambda sp: _down(sp, parsed_args.verbose), services)):
+        raise StopFailed("One or more services failed to stop")
 
-    @staticmethod
-    def help(ads, args):
-        AdsCommand.execute(args[0], ads, ["-h"])
 
-    @staticmethod
-    def list(ads, _):
-        ads.list()
+def bounce(args):
+    parser = MyArgParser(prog=cmd_bounce.name, 
+                         description=cmd_bounce.description)
+    _add_verbose_arg(parser)
+    _add_services_arg(parser)
+    parsed_args = parser.parse_args(args)
+    ads = _load_or_die()
+    services = _resolve_selectors(ads, parsed_args.service, True)
+    all_stopped = all(
+        map(lambda sp: _down(sp, parsed_args.verbose), services))
+    all_started = all(
+        map(lambda sp: _up(sp, parsed_args.verbose), services))
+    if not all_stopped:
+        raise StopFailed("One or more services failed to stop")
+    if not all_started:
+        raise StartFailed("One or more services failed to restart")
 
-    @staticmethod
-    def up(ads, args):
-        parser = MyArgParser(prog="up")
-        _add_verbose_arg(parser)
-        _add_services_arg(parser)
-        parsed_args = parser.parse_args(args)
-        services = _resolve_selectors(ads, parsed_args.service, True)
-        if len(services) > 1:
-            info("Starting " + str(services))
-        if not all(map(lambda sp: _up(sp, parsed_args.verbose), services)):
-            raise StartFailed("One or more services failed to start")
 
-    @staticmethod
-    def down(ads, args):
-        parser = MyArgParser(prog="down")
-        _add_verbose_arg(parser)
-        _add_services_arg(parser)
-        parsed_args = parser.parse_args(args)
-        services = _resolve_selectors(ads, parsed_args.service, True)
-        if not all(map(lambda sp: _down(sp, parsed_args.verbose), services)):
-            raise StopFailed("One or more services failed to stop")
+def status(args):
+    parser = MyArgParser(prog=cmd_status.name,
+                         description=cmd_status.description)
+    _add_verbose_arg(parser)
+    _add_services_arg(parser)
+    parsed_args = parser.parse_args(args)
+    ads = _load_or_die()
+    services = _resolve_selectors(ads, parsed_args.service, False)
+    if not all(map(lambda sp: _status(sp, parsed_args.verbose), services)):
+        raise SomeDown()
 
-    @staticmethod
-    def bounce(ads, args):
-        parser = MyArgParser(prog="bounce")
-        _add_verbose_arg(parser)
-        _add_services_arg(parser)
-        parsed_args = parser.parse_args(args)
-        services = _resolve_selectors(ads, parsed_args.service, True)
-        all_stopped = all(
-            map(lambda sp: _down(sp, parsed_args.verbose), services))
-        all_started = all(
-            map(lambda sp: _up(sp, parsed_args.verbose), services))
-        if not all_stopped:
-            raise StopFailed("One or more services failed to stop")
-        if not all_started:
-            raise StartFailed("One or more services failed to restart")
 
-    @staticmethod
-    def status(ads, args):
-        parser = MyArgParser(prog="status")
-        _add_verbose_arg(parser)
-        _add_services_arg(parser)
-        parsed_args = parser.parse_args(args)
-        services = _resolve_selectors(ads, parsed_args.service, False)
-        if not all(map(lambda sp: _status(sp, parsed_args.verbose), services)):
-            raise SomeDown()
+def logs(args):
+    parser = MyArgParser(prog=cmd_logs.name, description=cmd_logs.description)
+    sub_cmd_gp = parser.add_mutually_exclusive_group()
+    sub_cmd_gp.add_argument(
+        "--tail",
+        action="store_true",
+        help="(Default) Follow the logs with tail -f")
+    sub_cmd_gp.add_argument(
+        "--list",
+        action="store_true",
+        help="List the paths of all log files which exist "
+             "(useful for pipelining)")
+    sub_cmd_gp.add_argument(
+        "--cat",
+        action="store_true",
+        help="Dump the contents of all log files to stdout")
+    which_logs_gp = parser.add_mutually_exclusive_group()
+    which_logs_gp.add_argument(
+        "--general",
+        action="store_true",
+        help="(Default) Show the general logs specified by the "
+             "log_paths field")
+    which_logs_gp.add_argument(
+        "--errors",
+        action="store_true",
+        help="Show the error logs specified by the err_log_paths field")
+    _add_services_arg(parser)
+    parsed_args = parser.parse_args(args)
 
-    @staticmethod
-    def logs(ads, args):
+    if parsed_args.errors:
+        log_type = "error"
+    else:
+        # Default
+        log_type = "general"
 
-        parser = MyArgParser(prog="logs")
-        sub_cmd_gp = parser.add_mutually_exclusive_group()
-        sub_cmd_gp.add_argument(
-            "--tail",
-            action="store_true",
-            help="(Default) Follow the logs with tail -f")
-        sub_cmd_gp.add_argument(
-            "--list",
-            action="store_true",
-            help="List the paths of all log files which exist "
-                 "(useful for pipelining)")
-        sub_cmd_gp.add_argument(
-            "--cat",
-            action="store_true",
-            help="Dump the contents of all log files to stdout")
-        which_logs_gp = parser.add_mutually_exclusive_group()
-        which_logs_gp.add_argument(
-            "--general",
-            action="store_true",
-            help="(Default) Show the general logs specified by the "
-                 "log_paths field")
-        which_logs_gp.add_argument(
-            "--errors",
-            action="store_true",
-            help="Show the error logs specified by the err_log_paths field")
-        _add_services_arg(parser)
-        parsed_args = parser.parse_args(args)
+    ads = _load_or_die()
+    services = _resolve_selectors(ads, parsed_args.service, False)
+    resolved_log_paths = _collect_logs_nonempty(services, log_type)
 
-        if parsed_args.errors:
-            log_type = "error"
-        else:
-            # Default
-            log_type = "general"
+    if parsed_args.list:
+        print("\n".join(resolved_log_paths))
+    elif parsed_args.cat:
+        if not _cat(resolved_log_paths):
+            raise InternalError("cat command failed")
+    else:
+        # Default
+        if not _tail(resolved_log_paths, ads.project):
+            raise InternalError("tail command failed")
 
-        services = _resolve_selectors(ads, parsed_args.service, False)
-        resolved_log_paths = _collect_logs_nonempty(services, log_type)
 
-        if parsed_args.list:
-            print("\n".join(resolved_log_paths))
-        elif parsed_args.cat:
-            if not _cat(resolved_log_paths):
-                raise InternalError("cat command failed")
-        else:
-            # Default
-            if not _tail(resolved_log_paths, ads.project):
-                raise InternalError("tail command failed")
+def home(args):
+    parser = MyArgParser(prog=cmd_home.name, description=cmd_home.description)
+    _add_services_arg(parser)
+    parsed_args = parser.parse_args(args)
+    ads = _load_or_die()
+    services = _resolve_selectors(ads, parsed_args.service, True)
+    print("\n".join(_collect_rel_homes(services)))
 
-    @staticmethod
-    def home(ads, args):
-        parser = MyArgParser(prog="home")
-        _add_services_arg(parser)
-        parsed_args = parser.parse_args(args)
-        services = _resolve_selectors(ads, parsed_args.service, True)
-        print("\n".join(_collect_rel_homes(services)))
 
-    @staticmethod
-    def edit(ads, args):
-        parser = MyArgParser(prog="edit")
-        _add_services_arg(parser)
-        parsed_args = parser.parse_args(args)
-        services = _resolve_selectors(ads, parsed_args.service, True)
-        homes = _collect_rel_homes(services)
-        ymls = [os.path.join(home, "ads.yml") for home in homes]
-        editor = os.environ.get('EDITOR','vi')
-        subprocess.call([editor] + ymls)
+def edit(args):
+    parser = MyArgParser(prog=cmd_edit.name, description=cmd_edit.description)
+    _add_services_arg(parser)
+    parsed_args = parser.parse_args(args)
+    ads = _load_or_die()
+    services = _resolve_selectors(ads, parsed_args.service, True)
+    homes = _collect_rel_homes(services)
+    ymls = [os.path.join(home, "ads.yml") for home in homes]
+    editor = os.environ.get('EDITOR', 'vi')
+    subprocess.call([editor] + ymls)
+
+
+class Cmd:
+    def __init__(self, name, func, description, is_common=False, aliases=None):
+        self.name = name
+        self.func = func
+        self.description = description
+        self.is_common = is_common
+        self.aliases = aliases or []
+
+
+cmd_help = Cmd(
+    "help", None,
+    "Display help about ads")
+cmd_list = Cmd(
+    "list", list_func,
+    "Print the list of available services", True)
+cmd_up = Cmd(
+    "up", up,
+    "Ensure the specified services are running", True,
+    ["start", "run"])
+cmd_down = Cmd(
+    "down", down,
+    "Ensure the specified services are not running", True,
+    ["stop", "kill"])
+cmd_status = Cmd(
+    "status", status,
+    "Print status of the specified services", True)
+cmd_logs = Cmd(
+    "logs", logs,
+    "Tail the logs of the specified services", True)
+cmd_bounce = Cmd(
+    "bounce", bounce,
+    "Stop and restart the specified services", False,
+    ["restart"])
+cmd_home = Cmd(
+    "home", home,
+    "Print paths to the specified services' home directories")
+cmd_edit = Cmd(
+    "edit", edit,
+    "Edit a service's ads.yml")
+all_cmds = [cmd_help, cmd_list, cmd_up, cmd_down, cmd_status, cmd_logs,
+            cmd_bounce, cmd_home, cmd_edit]
+
+cmds_by_alias = dict([
+    (name, cmd)
+    for cmd in all_cmds
+    for name in ([cmd.name] + cmd.aliases)])
 
 
 ##############################################
@@ -871,27 +911,22 @@ def fail(exit_status, msg=None):
     exit(exit_status)
 
 
-def main():
+def format_help_for_cmds(cmds):
+    return "\n".join(["   %-10s %s" % (c.name, c.description) for c in cmds])
+
+
+def create_main_arg_parser():
     epilog = """
 The most commonly used ads commands are:
-  list        Print the list of available services
-  up          Ensure the specified services are running
-  down        Ensure the specified services are not running
-  status      Print status of the specified services
-  logs        Tail the logs of the specified services
+%s
 
 Some less common commands:
-  bounce      Stop and restart the specified services
-  home        Print paths to the specified services' home directories
-  edit        Edit a service's ads.yml
+%s
 
 See 'ads help <command>' to read about a specific subcommand.
-"""
-
+""" % (format_help_for_cmds(filter(lambda cmd: cmd.is_common, all_cmds)),
+       format_help_for_cmds(filter(lambda cmd: not cmd.is_common, all_cmds)))
     usage = "ads [-h] <command> [args] [service [service ...]]"
-
-    all_commands = AdsCommand.verbs + AdsCommand.verb_aliases.keys()
-
     parser = MyArgParser(
         prog="ads",
         description="Start, stop, and manage microservices in a codebase",
@@ -901,22 +936,43 @@ See 'ads help <command>' to read about a specific subcommand.
     parser.add_argument(
         "command",
         metavar="<command>",
-        choices=all_commands,
+        choices=cmds_by_alias.keys(),
         help="Do something to a service")
+    return parser
 
-    args = parser.parse_args(sys.argv[1:2])
 
-    profile_home = os.getenv("ADS_PROFILE_HOME")
-    if not profile_home or len(profile_home) == 0:
-        profile_home = os.path.expanduser("~")
+main_parser = create_main_arg_parser()
 
-    ads = Ads.load(os.curdir, profile_home)
-    if not ads:
-        fail(1, "ads must be run from within an ads project. "
-                "See README for more.")
+
+def help(args):
+    parser = MyArgParser(prog=cmd_help.name, description=cmd_help.description)
+    parser.add_argument(
+        "command",
+        metavar="<command>",
+        nargs="?",
+        choices=cmds_by_alias.keys(),
+        help="command to learn about")
+    parsed_args = parser.parse_args(args)
+    if parsed_args.command:
+        cmds_by_alias[parsed_args.command].func(["-h"])
+    else:
+        main_parser.print_help()
+
+
+cmds_by_alias["help"].func = help
+
+
+def main():
+    cmd_args = sys.argv[1:2]
+    subcmd_args = sys.argv[2:]
+
+    args = main_parser.parse_args(cmd_args)
+    if args.command == "help" and len(subcmd_args) == 0:
+        main_parser.print_help()
+        return
 
     try:
-        AdsCommand.execute(args.command, ads, sys.argv[2:])
+        cmds_by_alias[args.command].func(subcmd_args)
     except AdsCommandException as e:
         fail(e.exit_code, e.msg)
 
