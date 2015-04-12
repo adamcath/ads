@@ -24,6 +24,10 @@ def error(msg):
     sys.stderr.flush()
 
 
+def separator():
+    return "--------------------------------"
+
+
 try:
     import yaml
 except ImportError:
@@ -46,7 +50,6 @@ from collections import OrderedDict
 ##############################################
 
 class Treelisting:
-
     def __init__(self, sections=None):
         self.sections = sections or []
 
@@ -74,6 +77,7 @@ class Treelisting:
 # subprocess stuff
 ##############################################
 
+# TODO consolidate with _shell
 def _shell_get_output(cmd_str, working_dir):
     process = subprocess.Popen(
         cmd_str,
@@ -86,28 +90,53 @@ def _shell_get_output(cmd_str, working_dir):
     return process.communicate()[0]
 
 
-def _shell(cmd_str, working_dir, quiet=False):
-    if not quiet:
-        debug("cd " + working_dir)
-    # TODO Can we avoid this nonsense using shell=true?
+STREAM = "stream"
+BUFFER = "buffer"
+NULL = "null"
+
+
+def _shell(cmd_str, working_dir, output_mode=STREAM):
+
+    if output_mode == STREAM:
+        out_file = None
+    elif output_mode == BUFFER:
+        out_file = tempfile.NamedTemporaryFile()
+    elif output_mode == NULL:
+        out_file = open(os.devnull, 'w')
+    else:
+        raise Error("Unknown output_mode '%s'" % output_mode)
+
+    # Write the command into a file and invoke bash on it
     cmd_file = tempfile.NamedTemporaryFile()
-    cmd_file.write(cmd_str)
+    cmd_file.write("""
+echo 'cd %s'
+cat <<ADS_EOF
+%s
+ADS_EOF
+%s
+""" % (working_dir, cmd_str, cmd_str))
     cmd_file.flush()
-    if not quiet:
-        debug(cmd_str)
     try:
         status = subprocess.Popen(
             ["/bin/bash", cmd_file.name],
             close_fds=True,
             cwd=working_dir,
-            stdout=quiet and file("/dev/null", "w") or None,
-            stderr=quiet and file("/dev/null", "w") or None).wait()
+            # Same file for stdout and stderr to preserve order (roughly)
+            stdout=out_file,
+            stderr=out_file).wait()
     except KeyboardInterrupt:
         # Suppress python from printing a stack trace
         status = 47
         pass
     cmd_file.close()
-    return status
+
+    if output_mode == BUFFER:
+        out_file.seek(0)
+        output = out_file.read()
+        out_file.close()
+        return status, output
+    else:
+        return status, None
 
 
 ##############################################
@@ -115,7 +144,6 @@ def _shell(cmd_str, working_dir, quiet=False):
 ##############################################
 
 class ParseProjectException(Exception):
-
     def __init__(self, msg):
         super(ParseProjectException, self).__init__(msg)
 
@@ -142,7 +170,6 @@ def _abs_to_cwd_rel(abspath):
 
 
 class Service:
-
     @classmethod
     def load(cls, svc_yml, name):
         spec = _load_spec_file(svc_yml)
@@ -243,7 +270,6 @@ def _resolve(selector, project, service_sets_by_name, selector_stack):
 
 
 class ServiceSet:
-
     @classmethod
     def load(cls, name, spec, origin_file):
         _expect(list, spec, origin_file)
@@ -337,7 +363,6 @@ def _adsfiles_to_service_names(adsfiles):
 
 
 class Project:
-
     @classmethod
     def load_from_dir(cls, root_dir):
         project_yml = _find_project_yml(os.path.abspath(root_dir))
@@ -379,7 +404,6 @@ class Project:
 ##############################################
 
 class Profile:
-
     @classmethod
     def load_from_dir(cls, profile_dir):
         rc_path = os.path.join(profile_dir, ".ads_profile.yml")
@@ -401,7 +425,6 @@ class Profile:
 ##############################################
 
 class Ads:
-
     @classmethod
     def load(cls, root_dir, profile_dir):
         project = Project.load_from_dir(root_dir)
@@ -439,25 +462,23 @@ class Ads:
             default_service = self.project.services_by_name[default_selector]
             default_description = default_service.get_description_or_default()
 
-
-
         (Treelisting()
-            .with_section(
-                "All services in current project (%s):" % self.project.name,
-                Service.as_printable_dict(self.project.services_by_name.values()),
-                "None (create ads.yml files in this dir tree)")
-            .with_section(
-                "Groups defined in current project:",
-                ServiceSet.as_printable_dict(self.project.service_sets),
-                "None (add 'groups' to adsroot.yml)")
-            .with_section(
-                "Groups defined in your ads profile:",
-                ServiceSet.as_printable_dict(self.profile.service_sets),
-                "None (add 'groups' to ~/.ads_profile.yml)")
-            .with_section(
-                "Default service for commands if none are specified:",
-                {default_selector: default_description})
-         ).pretty_print()
+         .with_section(
+            "All services in current project (%s):" % self.project.name,
+            Service.as_printable_dict(self.project.services_by_name.values()),
+            "None (create ads.yml files in this dir tree)")
+         .with_section(
+            "Groups defined in current project:",
+            ServiceSet.as_printable_dict(self.project.service_sets),
+            "None (add 'groups' to adsroot.yml)")
+         .with_section(
+            "Groups defined in your ads profile:",
+            ServiceSet.as_printable_dict(self.profile.service_sets),
+            "None (add 'groups' to ~/.ads_profile.yml)")
+         .with_section(
+            "Default service for commands if none are specified:",
+            {default_selector: default_description})
+        ).pretty_print()
 
 
 ##############################################
@@ -465,7 +486,6 @@ class Ads:
 ##############################################
 
 class MyArgParser(argparse.ArgumentParser):
-
     def error(self, message):
         if "too few arguments" in message:
             # Default behavior of "ads" is too punishing
@@ -516,78 +536,120 @@ def _tail(files, project):
         os.path.relpath(os.path.abspath(f), project.home)
         for f in files]
 
-    status = _shell("tail -F " + " \\\n\t".join(project_rel_files), project.home)
+    status = _shell("tail -F " + " \\\n\t".join(project_rel_files),
+                    project.home)[0]
     return (status == 0 or
             status == 47)  # tail was ended by ctrl+c (Mac OS)
 
 
 def _cat(files):
-    return _shell("cat " + " ".join(files), os.curdir) == 0
+    return _shell("cat " + " ".join(files), os.curdir)[0] == 0
 
 
-def _status(service):
+def _status(service, verbose):
     if not service.status_cmd:
-        status = False
+        running = False
         msg = "status command not defined"
     else:
-        status = _shell(service.status_cmd, service.home) == 0
-        msg = status and "ok" or "not running"
+        if verbose:
+            info("Checking if %s is running" % service.name)
+        running = _shell(service.status_cmd,
+                         service.home,
+                         verbose and STREAM or NULL)[0] == 0
+        msg = running and "ok" or "not running"
     info(service.name + ": " + msg)
-    return status
+    return running
 
 
-def _is_running(service):
-    return _shell(service.status_cmd, service.home) == 0
+def _is_running(service, verbose):
+    return _shell(service.status_cmd,
+                  service.home,
+                  verbose and STREAM or NULL)[0] == 0
 
 
-def _up(service):
+def _up(service, verbose):
+
+    # Is it running?
     if not service.status_cmd:
         error("Status command not defined for " + service.name +
               "; can't tell if it's already running")
         return False
-
-    info("Checking if %s is already running" % service.name)
-    if _is_running(service):
+    if verbose:
+        info("Checking if %s is already running" % service.name)
+    if _is_running(service, verbose):
         info(service.name + " is already running")
         return True
+
+    # Is start defined?
     if not service.start_cmd:
         error("Start command not defined for " + service.name)
         return False
-    else:
-        info("Starting " + service.name)
-        success = _shell(service.start_cmd, service.home) == 0
-        if success:
+
+    # Do it
+    info("Starting " + service.name)
+    (status, out) = _shell(service.start_cmd, service.home,
+                           verbose and STREAM or BUFFER)
+    if status == 0:
+        if verbose:
             info("Started " + service.name)
+        return True
+    else:
+        error("Failed to start " + service.name)
+        if not verbose:
+            sys.stderr.write(out)
+            error(separator())
         else:
-            error("Failed to start " + service.name)
-        return success
+            # Output was already streamed
+            pass
+        return False
 
 
-def _down(service):
+def _down(service, verbose):
+
+    # Is it running?
     if not service.status_cmd:
         error("Status command not defined for " + service.name +
               "; can't tell if it's already stopped")
         return False
-
-    info("Checking if %s is running" % service.name)
-    if not _is_running(service):
+    if verbose:
+        info("Checking if %s is running" % service.name)
+    if not _is_running(service, verbose):
         info(service.name + " is already stopped")
         return True
+
+    # Is stop defined?
     if not service.stop_cmd:
         error("Stop command not defined for " + service.name)
         return False
-    else:
-        info("Stopping %s" % service.name)
-        success = _shell(service.stop_cmd, service.home) == 0
-        if success:
+
+    # Do it
+    info("Stopping %s" % service.name)
+    (status, out) = _shell(service.stop_cmd, service.home,
+                           verbose and STREAM or BUFFER)
+    if status == 0:
+        if verbose:
             info("Stopped " + service.name)
+        return True
+    else:
+        error("Failed to stop " + service.name)
+        if not verbose:
+            sys.stderr.write(out)
+            error(separator())
         else:
-            error("Failed to stop " + service.name)
-        return success
+            # Output was already streamed
+            pass
+        return False
 
 
 def _collect_rel_homes(services):
     return [s.resolve_home_relative_to_cwd() for s in services]
+
+
+def _add_verbose_arg(parser):
+    parser.add_argument(
+        "-v", "--verbose",
+        action="store_true",
+        help="show output of commands that ads delegates to")
 
 
 def _add_services_arg(parser):
@@ -597,15 +659,7 @@ def _add_services_arg(parser):
         help="The services or groups to act on")
 
 
-def _default_cli(cmd, ads, args, fail_if_no_services=True):
-    parser = MyArgParser(prog=cmd)
-    _add_services_arg(parser)
-    parsed_args = parser.parse_args(args)
-    return _resolve_selectors(ads, parsed_args.service, fail_if_no_services)
-
-
 def _resolve_selectors(ads, selectors, fail_if_empty):
-
     if len(selectors) == 0:
         selectors = ["default"]
 
@@ -639,7 +693,6 @@ def _collect_logs_nonempty(services, log_type):
 
 
 class AdsCommand:
-
     verbs = [
         "help",
         "list",
@@ -677,28 +730,47 @@ class AdsCommand:
         ads.list()
 
     def up(self, ads, args):
-        services = _default_cli("up", ads, args)
-        info("Starting " + str(services))
-        if not all(map(lambda sp: _up(sp), services)):
+        parser = MyArgParser(prog="up")
+        _add_verbose_arg(parser)
+        _add_services_arg(parser)
+        parsed_args = parser.parse_args(args)
+        services = _resolve_selectors(ads, parsed_args.service, True)
+        if len(services) > 1:
+            info("Starting " + str(services))
+        if not all(map(lambda sp: _up(sp, parsed_args.verbose), services)):
             raise StartFailed("One or more services failed to start")
 
     def down(self, ads, args):
-        services = _default_cli("down", ads, args)
-        if not all(map(lambda sp: _down(sp), services)):
+        parser = MyArgParser(prog="down")
+        _add_verbose_arg(parser)
+        _add_services_arg(parser)
+        parsed_args = parser.parse_args(args)
+        services = _resolve_selectors(ads, parsed_args.service, True)
+        if not all(map(lambda sp: _down(sp, parsed_args.verbose), services)):
             raise StopFailed("One or more services failed to stop")
 
     def bounce(self, ads, args):
-        services = _default_cli("bounce", ads, args)
-        all_stopped = all(map(lambda sp: _down(sp), services))
-        all_started = all(map(lambda sp: _up(sp), services))
+        parser = MyArgParser(prog="bounce")
+        _add_verbose_arg(parser)
+        _add_services_arg(parser)
+        parsed_args = parser.parse_args(args)
+        services = _resolve_selectors(ads, parsed_args.service, True)
+        all_stopped = all(
+            map(lambda sp: _down(sp, parsed_args.verbose), services))
+        all_started = all(
+            map(lambda sp: _up(sp, parsed_args.verbose), services))
         if not all_stopped:
             raise StopFailed("One or more services failed to stop")
         if not all_started:
             raise StartFailed("One or more services failed to restart")
 
     def status(self, ads, args):
-        services = _default_cli("status", ads, args, False)
-        if not all(map(lambda sp: _status(sp), services)):
+        parser = MyArgParser(prog="status")
+        _add_verbose_arg(parser)
+        _add_services_arg(parser)
+        parsed_args = parser.parse_args(args)
+        services = _resolve_selectors(ads, parsed_args.service, False)
+        if not all(map(lambda sp: _status(sp, parsed_args.verbose), services)):
             raise SomeDown()
 
     def logs(self, ads, args):
@@ -751,7 +823,10 @@ class AdsCommand:
                 raise InternalError("tail command failed")
 
     def home(self, ads, args):
-        services = _default_cli("home", ads, args)
+        parser = MyArgParser(prog="home")
+        _add_services_arg(parser)
+        parsed_args = parser.parse_args(args)
+        services = _resolve_selectors(ads, parsed_args.service, True)
         print("\n".join(_collect_rel_homes(services)))
 
 
@@ -766,7 +841,6 @@ def fail(exit_status, msg=None):
 
 
 def main():
-
     epilog = """
 The most commonly used ads commands are:
   list        Print the list of available services
@@ -813,6 +887,7 @@ See 'ads help <command>' to read about a specific subcommand.
         AdsCommand.execute(args.command, ads, sys.argv[2:])
     except AdsCommandException as e:
         fail(e.exit_code, e.msg)
+
 
 if __name__ == "__main__":
     main()

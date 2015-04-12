@@ -66,12 +66,12 @@ test_trivial_service_basics() {
 
     assert_contains "$(ads list)" "A rather trivial service"
 
-    assert_ok "ads up service" "Started service"
+    assert_ok "ads up service" "Starting service"
     assert_ok "ads status service" "service: ok"
     assert_contains "$(ads logs --cat)" \
         "some output from the service" "some errors from the service"
 
-    assert_ok "ads down service" "Stopped service"
+    assert_ok "ads down service" "Stopping service"
     assert_fails_with_stdout "ads status service" "service: not running"
     assert_contains "$(ads logs --cat)" \
         "some output from the service" "some errors from the service"
@@ -86,10 +86,10 @@ test_bogus_commands() {
 test_idempotence() {
     go_test_project one-trivial-service
 
-    assert_ok "ads up service" "Started"
+    assert_ok "ads up service" "Starting"
     assert_ok "ads up service" "already running"
 
-    assert_ok "ads down service" "Stopped"
+    assert_ok "ads down service" "Stopping"
     assert_ok "ads down service" "already stopped"
 }
 
@@ -99,7 +99,7 @@ test_bounce() {
     assert_ok "ads up service"
     local old_service_pid="$(pgrep -f service.sh)"
 
-    assert_ok "ads bounce service" "Stopped" "Started"
+    assert_ok "ads bounce service" "Stopping" "Starting"
     local new_service_pid="$(pgrep -f service.sh)"
 
     assert_not_equal "$old_service_pid" "$new_service_pid"
@@ -140,7 +140,7 @@ test_list_logs() {
     go_test_project one-trivial-service
 
     # Must start service to create log
-    assert_ok "ads up service" "Started"
+    assert_ok "ads up service"
 
     # Use assert_equals instead of a contains check because this command
     # can be used for pipelining. So it must be _exactly_ a cwd-relative
@@ -190,6 +190,60 @@ test_general_vs_error_logs() {
 
     # Default is --general
     assert_equal "$(ads logs --list)" "$(ads logs --list --general)"
+}
+
+test_up_verbose() {
+    go_test_project one-trivial-service
+    assert_not_contains "$(ads up)" 'Checking if' 'Started' 'bash service.sh'
+    assert_ok "ads down"
+    assert_contains "$(ads up -v)" 'Checking if' 'Started' 'bash service.sh'
+    assert_ok "ads down"
+    assert_contains "$(ads up --verbose)" 'Checking if' 'Started' 'bash service.sh'
+    assert_ok "ads down"
+    
+    # If up fails, show output even without -v
+    go_test_project all-commands-fail
+    assert_fails "ads up" 'Failed to start' 'bash service.sh'
+}
+
+test_down_verbose() {
+    go_test_project one-trivial-service
+    assert_ok "ads up"
+    assert_not_contains "$(ads down)" 'Checking if' 'Stopped' 'kill -9'
+    assert_ok "ads up"
+    assert_contains "$(ads down -v)" 'Checking if' 'Stopped' 'kill -9'
+    assert_ok "ads up"
+    assert_contains "$(ads down --verbose)" 'Checking if' 'Stopped' 'kill -9'
+    
+    # If up fails, show output even without -v
+    go_test_project all-commands-fail
+    assert_fails "ads up"
+    assert_fails "ads down" 'Failed to stop' 'kill -9'
+}
+
+test_bounce_verbose() {
+    go_test_project one-trivial-service
+    assert_ok "ads up"
+    assert_not_contains "$(ads bounce)" 'kill -9' 'bash service.sh'
+    assert_ok "ads up"
+    assert_contains "$(ads bounce -v)" 'kill -9' 'bash service.sh'
+    assert_ok "ads up"
+    assert_contains "$(ads bounce --verbose)" 'kill -9' 'bash service.sh'
+    
+    # If up fails, show output even without -v
+    go_test_project all-commands-fail
+    assert_ok "ads up"
+    assert_fails "ads bounce" \
+        'Failed to stop' 'kill -9' \
+        'Failed to start' 'bash service.sh'
+}
+
+test_status_verbose() {
+    go_test_project one-trivial-service
+
+    assert_not_contains "$(ads status)" 'Checking if' "pgrep"
+    assert_contains "$(ads status -v)" 'Checking if' "pgrep"
+    assert_contains "$(ads status --verbose)" 'Checking if' "pgrep"
 }
 
 ###############################################################################

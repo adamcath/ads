@@ -1,0 +1,17 @@
+start_cmd:
+|
+    echo "trying to start"
+    echo "something seems wrong" >&2
+    bash service.sh 1>logs/stdout 2>logs/stderr &
+    exit 7
+
+stop_cmd:
+|
+    echo "trying to stop"
+    echo "something seems wrong" >&2
+    pgrep -f service.sh | xargs kill -9
+    exit 7
+
+status_cmd:
+|
+    pgrep -f service.sh
