@@ -52,9 +52,8 @@ $ ads list
 
 # A brief tour
 
-You should follow along!
+You should follow along (see "Installing" first)
 ```
-$ git clone https://github.com/adamcath/ads.git
 $ cd ads/docs/samples/intro
 ```
 
