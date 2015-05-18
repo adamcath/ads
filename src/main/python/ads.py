@@ -53,6 +53,7 @@ import tempfile
 import subprocess
 import argparse
 import glob
+import time
 from collections import OrderedDict
 
 
@@ -652,22 +653,43 @@ def _down(service, verbose):
         return False
 
     # Do it
+    attempts = 0
     info("Stopping %s" % service.name)
-    (status, out) = _shell(service.stop_cmd, service.home,
-                           verbose and STREAM or BUFFER)
-    if status == 0:
-        if verbose:
-            debug("Stopped " + service.name)
-        return True
-    else:
-        error("Failed to stop " + service.name)
-        if not verbose:
-            sys.stderr.write(out)
-            error(separator())
+    while True:
+        (status, out) = _shell(service.stop_cmd, service.home,
+                               verbose and STREAM or BUFFER)
+        attempts = attempts + 1
+
+        if status == 0:
+            if verbose:
+                debug("Stop command succeeded")
         else:
-            # Output was already streamed
-            pass
-        return False
+            error("Stop command failed")
+            if not verbose:
+                sys.stderr.write(out)
+                error(separator())
+            else:
+                # Output was already streamed
+                pass
+            return False
+
+        if not _is_running(service, verbose):
+            if verbose:
+                debug("Status says %s is down" % service.name)
+            return True
+
+        elif attempts > 10:
+            error(("Stop command succeeded, but status says %s " +
+                   "is still running. This is a bug in your ads.yml. " +
+                   "If you can reproduce this, try with -v to debug.")
+                  % service.name)
+            return False
+
+        else:
+            if verbose:
+                debug("%s is still running after stop command; retrying" %
+                      service.name)
+            time.sleep(0.5)
 
 
 def _collect_rel_homes(services):

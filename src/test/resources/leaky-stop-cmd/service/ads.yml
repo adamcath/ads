@@ -1,0 +1,8 @@
+start_cmd:
+    bash service.sh &
+
+stop_cmd:
+    sleep $LEAKY_STOP_SLEEP && pgrep -f service.sh | xargs kill -9 &
+
+status_cmd:
+    pgrep -f service.sh
