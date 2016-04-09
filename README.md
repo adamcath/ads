@@ -174,21 +174,25 @@ usage: logs [-h] [--tail | --list | --cat] [--general | --errors]
 
 ### Dependencies
 
-- ads has been tested with python 2.7.8 on Mac OS Yosemite
+- ads has been tested with python 2.7.8 on Mac OS Yosemite-El Capitan
 - python
-- pyyaml: install with `sudo pip install pyyaml` or `sudo easy_install pyyaml`
+- pip: install with `easy_install pip`
 - shell stuff available on any Unixy OS (`find`, `bash`, `tail`, `cat`) 
 
-### Installing
+### Installing from source
 
 - `git clone https://github.com/adamcath/ads.git`
-- Add ads/bin to your `$PATH`
+- `pip install -e .`
 
 ### Testing
 
 - Go to an ads project (try doc/samples/intro) and type `ads list`
 - Now try adding ads to your project by following the overview above
-- (If you like, you can run tests with `./gradlew test functionalTest`)
+
+### Running the automated tests
+
+- Get the source
+- `./unit_tests.sh && ./functional_tests.sh`
 
 
 # FAQ
@@ -262,8 +266,8 @@ or if docker somehow making ads irrelevant.
 
 ### groups
 
-TODO
+TODO write docs
 
 ### defaults
 
-TODO
+TODO write docs

@@ -1,10 +1,14 @@
 #!/bin/bash
+#
+# These tests assume that ads is installed. Run this file directly to test your
+# existing installation, or run functional_tests.sh at the top of the repo
+# to do a local installation suitable for testing.
 
 set -o errexit
 set -o nounset
 set -o pipefail
 
-cd "$(dirname "$0")"
+cd "$(dirname "${BASH_SOURCE[0]}")"
 readonly here="$(pwd)"
 
 ###############################################################################
@@ -12,10 +16,6 @@ readonly here="$(pwd)"
 ###############################################################################
 
 source "$here"/util/BashUnit.sh
-
-ads() {
-    python "$here"/../../main/python/ads.py "$@"
-}
 
 readonly test_tmp="$(mktemp -d /tmp/ads-test.XXX)"
 copy_project_to_tmp_and_go() {

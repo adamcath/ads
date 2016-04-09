@@ -1,2 +1,6 @@
 .idea
-.gradle
+.coverage
+.DS_Store
+*.egg-info
+*.pyc
+build

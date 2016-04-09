@@ -1,11 +1,3 @@
-#!/usr/bin/python
-#
-# Main entry point for ads. See README for overall description; run with -h for
-# usage.
-#
-# @author adamcath
-
-
 import sys
 
 
@@ -775,7 +767,7 @@ def down(args):
 
 
 def bounce(args):
-    parser = MyArgParser(prog=cmd_bounce.name, 
+    parser = MyArgParser(prog=cmd_bounce.name,
                          description=cmd_bounce.description)
     _add_verbose_arg(parser)
     _add_services_arg(parser)
@@ -997,7 +989,3 @@ def main():
         cmds_by_alias[args.command].func(subcmd_args)
     except AdsCommandException as e:
         fail(e.exit_code, e.msg)
-
-
-if __name__ == "__main__":
-    main()

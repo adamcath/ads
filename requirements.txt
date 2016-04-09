@@ -1,0 +1,7 @@
+--index-url https://pypi.python.org/simple/
+
+# Everything that's mentioned in setup.py
+-e .
+
+# Stuff for testing
+coverage==4.0.2
