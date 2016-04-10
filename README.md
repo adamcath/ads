@@ -33,7 +33,7 @@ description:
     # Optional but a good idea
 ```
 
-There are more fields, but this will get you started.
+There are a few more fields, but this will get you started.
 
 Create one more file called `adsroot.yml`, in the root of your codebase:
 
@@ -50,7 +50,23 @@ $ ads list
    ninja: Web service that turns your ordinary app into badass rockstart tech.
 ```
 
-# A brief tour
+Now ads lets you easily start, stop, get status, and follow logs for your services.
+
+
+# Getting started
+
+### Dependencies
+
+- ads has been tested with python 2.7.8 on Mac OS Yosemite-El Capitan
+- python
+- pip: install with `easy_install pip`
+- shell stuff available on any Unixy OS (`find`, `bash`, `tail`, `cat`) 
+
+### Installing
+
+- `pip install adscli`
+
+### A brief tour
 
 If you want to follow along, install ads (see "Installing") and 
 clone this repo to get the sample project
@@ -173,24 +189,6 @@ usage: logs [-h] [--tail | --list | --cat] [--general | --errors]
 ```
 
 
-# Getting started
-
-### Dependencies
-
-- ads has been tested with python 2.7.8 on Mac OS Yosemite-El Capitan
-- python
-- pip: install with `easy_install pip`
-- shell stuff available on any Unixy OS (`find`, `bash`, `tail`, `cat`) 
-
-### Installing
-
-- `pip install adscli`
-
-### Testing
-
-- Go to an ads project (try doc/samples/intro) and type `ads list`
-- Now try adding ads to your project by following the overview above
-
 # FAQ
 
 ### My service needs some one-time setup before it runs. How do I tell ads this?
@@ -200,7 +198,7 @@ before you can start anything. ads doesn't have a solution for this yet. Your
 service should probably try to detect the missing precondition, refuse to
 start, and direct the user to the relevant wiki page.
 
-### Does ads have a concept of dependencies?
+### Does ads let me define dependencies?
 
 No. This is one area where ads is opinionated: in production, any service could
 go down, and the other services would have to be able to deal with that.
