@@ -210,7 +210,7 @@ In other words, if a service can't even start without another running, they're
 actually one service.
 
 What you _can_ do is specify groups of services and easily start them all
-(`ads up teamAlpha`).
+(see "Groups" below).
 
 ### Can I specify a "build" step separate from "run"?
 
@@ -278,3 +278,25 @@ in VMs, etc, ads is still useful.
 
 - Get the source
 - `./unit_tests.sh && ./functional_tests.sh`
+
+
+# Advanced features
+
+## Groups
+
+You can define groups of services in `adsroot.yml`:
+
+```
+groups:
+    north-america:
+    - usa
+    - canada
+```
+
+and then operate on the whole group at once:
+
+```
+$ ads up north-america
+```
+
+Groups can contain other groups (but not cycles! Nice try!).
