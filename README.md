@@ -197,14 +197,14 @@ usage: logs [-h] [--tail | --list | --cat] [--general | --errors]
 
 # FAQ
 
-#### My service needs some one-time setup before it runs. How do I tell ads this?
+### My service needs some one-time setup before it runs. How do I tell ads this?
 
 This is a common scenario; for example, you may need to set up the DB schema 
 before you can start anything. ads doesn't have a solution for this yet. Your
 service should probably try to detect the missing precondition, refuse to
 start, and direct the user to the relevant wiki page.
 
-#### Does ads have a concept of dependencies?
+### Does ads have a concept of dependencies?
 
 No. This is one area where ads is opinionated: in production, any service could
 go down, and the other services would have to be able to deal with that.
@@ -214,14 +214,14 @@ which you cannot avoid, of some services being up and others being down.
 
 tl;dr: If a service can't run without another running, they're actually one service.
 
-#### Can I specify a "build" step separate from "run"?
+### Can I specify a "build" step separate from "run"?
 
 No. If running requires building, it should just do it. If that's slow, then
 improve your project's build avoidance to reduce rebuilds.
 
-#### Why isn't this just...
+### Why isn't this just...
  
-##### part of the build system?
+#### part of the build system?
 
 - Building is a very general problem, and build systems are quite flexible.
   This flexibility comes at a cost: even in a well-factored build system, 
@@ -233,9 +233,10 @@ improve your project's build avoidance to reduce rebuilds.
 - It's fairly annoying to implement things like `ads logs` in most build 
   systems. I wanted to make it trivial for developers to do the right thing.
 
-##### an init.d script (or similar)?
+#### an init.d script (or similar)?
 
 ads is inspired by OS service managers, but:
+
 - I don't want to "install" each service on my dev box. That would raise
   awkward questions about what happens when I change the code. I want
   to run things straight from source.
@@ -243,7 +244,7 @@ ads is inspired by OS service managers, but:
   if so, I'd be curious to learn about them.
 - I suspect that if this were a good solution, people would be doing it.
 
-##### some project-specific helper scripts?
+#### some project-specific helper scripts?
 
 In my experience, code bases frequently evolve a set of helper scripts that 
 make it tolerable to deal with multiple projects. They work well when there's 
@@ -253,7 +254,7 @@ prevent spaghetti unless you end up designing something like ads, which lets
 you freely compose commands with services. But then...you could have just 
 used ads!
 
-##### docker/vagrant/virtualization tech x?
+#### docker/vagrant/virtualization tech x?
 
 Virtualization solves a very different set of problems - primarily service 
 isolation. That said, I haven't tried docker yet (gasp!), so I'm not totally 
