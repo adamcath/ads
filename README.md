@@ -57,7 +57,7 @@ clone this repo to get the sample project
 (`git clone https://github.com/adamcath/ads`).
 
 ```
-$ cd ads/docs/samples/intro
+$ cd ads/doc/samples/intro
 ```
 
 What do we got here?
