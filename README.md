@@ -249,11 +249,11 @@ used ads!
 
 #### docker/vagrant/virtualization tech x?
 
-Virtualization solves a very different set of problems - primarily service 
-isolation. That said, I haven't tried docker yet (gasp!), so I'm not totally 
-sure. I suspect ads will still make sense with docker (`ads up` would build and 
-spin up a container). I'd love to hear your experiences with docker + ads, 
-or if docker somehow making ads irrelevant.
+Virtualization solves a very different (and much deeper) set of problems than 
+ads. If you have multiple services running in VMs, you still need something
+to wrangle them. If everything you use is managed by docker-compose, you
+might not need ads. But if some stuff is in docker, other is native, other
+in VMs, etc, ads is still useful.
 
 
 # Development
