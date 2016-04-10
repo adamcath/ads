@@ -179,21 +179,14 @@ usage: logs [-h] [--tail | --list | --cat] [--general | --errors]
 - pip: install with `easy_install pip`
 - shell stuff available on any Unixy OS (`find`, `bash`, `tail`, `cat`) 
 
-### Installing from source
+### Installing
 
-- `git clone https://github.com/adamcath/ads.git`
-- `pip install -e .`
+- `pip install adscli`
 
 ### Testing
 
 - Go to an ads project (try doc/samples/intro) and type `ads list`
 - Now try adding ads to your project by following the overview above
-
-### Running the automated tests
-
-- Get the source
-- `./unit_tests.sh && ./functional_tests.sh`
-
 
 # FAQ
 
@@ -261,3 +254,16 @@ isolation. That said, I haven't tried docker yet (gasp!), so I'm not totally
 sure. I suspect ads will still make sense with docker (`ads up` would build and 
 spin up a container). I'd love to hear your experiences with docker + ads, 
 or if docker somehow making ads irrelevant.
+
+
+# Development
+
+### Installing from source
+
+- `git clone https://github.com/adamcath/ads.git`
+- `pip install -e .`
+
+### Running the automated tests
+
+- Get the source
+- `./unit_tests.sh && ./functional_tests.sh`
