@@ -225,7 +225,7 @@ improve your project's build avoidance to reduce rebuilds.
 - Big projects often involve multiple languages and build systems.
   I wanted a uniform way to run them all.
 - It's fairly annoying to implement things like `ads logs` in most build 
-  systems. I wanted to make it trivial for developers to do the right thing.
+  systems.
 
 #### an init.d script (or similar)?
 
