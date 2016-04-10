@@ -53,7 +53,7 @@ $ ads list
 # A brief tour
 
 If you want to follow along, install ads (see "Installing") and 
-cloning this repo to get the sample project
+clone this repo to get the sample project
 (`git clone https://github.com/adamcath/ads`).
 
 ```
