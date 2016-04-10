@@ -28,6 +28,7 @@ fi
 
 echo
 echo "### Generating RST from Markdown"
+mkdir -p build
 pandoc --from=markdown --to=rst --output=build/README.rst README.md
 
 echo
