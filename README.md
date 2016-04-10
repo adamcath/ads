@@ -50,7 +50,20 @@ $ ads list
    ninja: Web service that turns your ordinary app into badass rockstart tech.
 ```
 
-Now ads lets you easily start, stop, get status, and follow logs for your services.
+Once you've "adsified" a bunch of services, ads makes it really convenient to
+operate on several at once.
+
+```
+$ ads status
+--- db: not running
+--- ninja: not running
+--- pirate: not running
+
+$ ads up ninja pirate
+--- Starting [ninja, pirate]
+--- Starting ninja
+--- Starting pirate
+```
 
 
 # Getting started
