@@ -261,14 +261,3 @@ isolation. That said, I haven't tried docker yet (gasp!), so I'm not totally
 sure. I suspect ads will still make sense with docker (`ads up` would build and 
 spin up a container). I'd love to hear your experiences with docker + ads, 
 or if docker somehow making ads irrelevant.
-
-
-# Advanced stuff
-
-### groups
-
-TODO write docs
-
-### defaults
-
-TODO write docs

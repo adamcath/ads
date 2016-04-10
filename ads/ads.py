@@ -81,7 +81,6 @@ class Treelisting:
 # subprocess stuff
 ##############################################
 
-# TODO consolidate with _shell
 def _shell_get_output(cmd_str, working_dir):
     process = subprocess.Popen(
         cmd_str,
@@ -359,7 +358,7 @@ def _adsfiles_to_service_names(adsfiles):
     for f in adsfiles:
         basename = os.path.basename(os.path.dirname(f))
         if basename in svc_name_to_file:
-            raise Exception("not yet implemented")  # TODO
+            raise Exception("not yet implemented")
         svc_name_to_file[basename] = f
         file_to_svc_name[f] = basename
     return file_to_svc_name
