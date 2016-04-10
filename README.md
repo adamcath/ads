@@ -206,12 +206,22 @@ The dependant service might go unhealthy, but it shouldn't crash. Therefore,
 starting in an arbitrary order is a special case of the general problem,
 which you cannot avoid, of some services being up and others being down.
 
-tl;dr: If a service can't run without another running, they're actually one service.
+In other words, if a service can't even start without another running, they're 
+actually one service.
+
+What you _can_ do is specify groups of services and easily start them all
+(`ads up teamAlpha`).
 
 ### Can I specify a "build" step separate from "run"?
 
 No. If running requires building, it should just do it. If that's slow, then
 improve your project's build avoidance to reduce rebuilds.
+
+### Can I use ads to run my services in production?
+
+You could, but it's probably not very useful. The main benefit of ads is the
+ergonomics of running several services from source. In my experience, this 
+is not a big problem in production.
 
 ### Why isn't this just...
  
