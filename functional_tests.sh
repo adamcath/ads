@@ -7,4 +7,4 @@
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
 pip install -e .
-source tests/bash/FunctionalTest.sh
+source tests/bash/All.sh

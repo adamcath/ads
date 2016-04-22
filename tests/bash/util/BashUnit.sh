@@ -86,7 +86,7 @@ run_tests() {
     trap - EXIT
 
     echo
-    echo "TESTS COMPLETE! Passed: ${#all_tests[*]}"
+    echo "SUITE COMPLETE! Passed: ${#all_tests[*]}"
 }
 
 ###################################################

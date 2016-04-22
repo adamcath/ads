@@ -1,0 +1,6 @@
+Most of the scripts in this dir are functional test suites.
+All.sh runs them all.
+
+These tests assume that ads is installed. Run them directly to test your
+existing installation, or run functional_tests.sh at the top of the repo
+to do a local installation suitable for testing.
