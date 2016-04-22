@@ -109,31 +109,32 @@ test_logs_default() {
     # Same as logs --tail
     go_test_project one-trivial-service
 
+    # Start service to create logs
     ads up service
-    ads logs service > /dev/null &
 
+    local logs_output="$(mktemp)"
+
+    ads logs service > "$logs_output" &
+    local pid="$!"
     sleep 1
+    echo "Looking for expected tail output"
+    grep "==> service/logs/stdout <==" "$logs_output"
+    grep "==> service/logs/stderr <==" "$logs_output"
+    kill -9 "$pid"
 
-    # There should be some invocation of "tail" with stdout and stderr
-    # (the service's log files) as arguments
-    assert_contains "$(ps -ef | grep 'tail -F')" "stdout" "stderr"
-
-    pgrep -f "tail -F service/logs" | xargs kill -9
+    # tail args are cwd-relative
+    cd service/logs
+    ads logs service > "$logs_output" &
+    local pid="$!"
+    sleep 1
+    echo "Looking for expected tail output"
+    grep "==> stdout <==" "$logs_output"
+    grep "==> stderr <==" "$logs_output"
+    kill -9 "$pid"
 }
 
 test_logs_tail() {
-    go_test_project one-trivial-service
-
-    ads up service
-    ads logs --tail service > /dev/null &
-
-    sleep 1
-
-    # There should be some invocation of "tail" with stdout and stderr
-    # (the service's log files) as arguments
-    assert_contains "$(ps -ef | grep 'tail -F')" "stdout" "stderr"
-
-    pgrep -f "tail -F service/logs" | xargs kill -9
+    test_logs_default
 }
 
 test_list_logs() {
@@ -141,6 +142,7 @@ test_list_logs() {
 
     # Must start service to create log
     assert_ok "ads up service"
+    sleep 1
 
     # Use assert_equal instead of a contains check because this command
     # can be used for pipelining. So it must be _exactly_ a cwd-relative
@@ -156,6 +158,25 @@ service/logs/stderr"
     assert_equal "$log_list" \
 "stdout
 stderr"
+}
+
+test_cat_logs() {
+    go_test_project one-trivial-service
+
+    # Start service to create logs
+    ads up service
+    sleep 1
+
+    # ads logs cat actually prints the cat command
+    assert_contains \
+        "$(ads logs --cat service)" \
+        "cat service/logs/stdout service/logs/stderr"
+
+    # cat args are cwd-relative
+    cd service/logs
+    assert_contains \
+        "$(ads logs --cat service)" \
+        "cat stdout stderr"
 }
 
 test_logs_commands_when_logs_missing() {

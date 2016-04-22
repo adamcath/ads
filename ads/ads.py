@@ -554,13 +554,8 @@ def _load_or_die():
     return ads
 
 
-def _tail(files, project):
-    project_rel_files = [
-        os.path.relpath(os.path.abspath(f), project.home)
-        for f in files]
-
-    status = _shell("tail -F " + " \\\n\t".join(project_rel_files),
-                    project.home)[0]
+def _tail(files):
+    status = _shell("tail -F " + " \\\n\t".join(files), os.curdir)[0]
     return (status == 0 or
             status == 47)  # tail was ended by ctrl+c (Mac OS)
 
@@ -841,7 +836,7 @@ def logs(args):
             raise InternalError("cat command failed")
     else:
         # Default
-        if not _tail(resolved_log_paths, ads.project):
+        if not _tail(resolved_log_paths):
             raise InternalError("tail command failed")
 
 
