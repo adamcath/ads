@@ -8,7 +8,7 @@ except IOError:
 
 setup(
     name='adscli',
-    version='0.8.5',
+    version='0.8.6',
     description='Start, stop, and manage microservices in a codebase',
     long_description=long_description,
     url='https://github.com/adamcath/ads',
