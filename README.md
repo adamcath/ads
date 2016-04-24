@@ -295,7 +295,7 @@ in VMs, etc, ads is still useful.
 
 # Advanced features
 
-## Groups
+### Groups
 
 You can define groups of services in `adsroot.yml`:
 
