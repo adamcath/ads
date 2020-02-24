@@ -47,7 +47,7 @@ Now you can run ads from anywhere in the codebase and get at any of the services
 ```
 $ cd /anywhere/in/codebase
 $ ads list
-   ninja: Web service that turns your ordinary app into badass rockstart tech.
+   ninja: Web service that turns your ordinary app into badass rockstar tech.
 ```
 
 Once you've "adsified" a bunch of services, ads makes it really convenient to
